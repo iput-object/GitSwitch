@@ -1,0 +1,97 @@
+//! System tray: a live menu of accounts (active one checked). Clicking one
+//! switches identity with the same logic as the window, no UI needed.
+
+use tauri::{
+    menu::{CheckMenuItemBuilder, Menu, MenuItemBuilder},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Emitter, Manager, Wry,
+};
+
+const OPEN_ID: &str = "__open";
+const QUIT_ID: &str = "__quit";
+const NONE_ID: &str = "__none";
+
+fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
+    let (profiles, active) = crate::db::list_for_tray(app);
+    let mut items = tauri::menu::MenuBuilder::new(app);
+
+    if profiles.is_empty() {
+        let empty = MenuItemBuilder::with_id(NONE_ID, "No accounts yet")
+            .enabled(false)
+            .build(app)?;
+        items = items.item(&empty);
+    } else {
+        for (id, name) in &profiles {
+            let entry = CheckMenuItemBuilder::with_id(id.clone(), name)
+                .checked(active.as_deref() == Some(id.as_str()))
+                .build(app)?;
+            items = items.item(&entry);
+        }
+    }
+
+    let open = MenuItemBuilder::with_id(OPEN_ID, "Open GitSwitch").build(app)?;
+    let quit = MenuItemBuilder::with_id(QUIT_ID, "Quit GitSwitch").build(app)?;
+    items.separator().item(&open).item(&quit).build()
+}
+
+fn show_main(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
+fn on_menu_event(app: &AppHandle, id: &str) {
+    match id {
+        OPEN_ID => show_main(app),
+        QUIT_ID => app.exit(0),
+        NONE_ID => {}
+        profile_id => {
+            if crate::db::activate(app, profile_id).is_ok() {
+                let _ = app.emit("active-changed", profile_id.to_string());
+            }
+            rebuild(app);
+        }
+    }
+}
+
+/// Create the tray icon and its menu (called once at startup).
+pub fn create(app: &AppHandle) -> tauri::Result<()> {
+    let menu = build_menu(app)?;
+    let mut builder = TrayIconBuilder::with_id("main")
+        .tooltip("GitSwitch")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| on_menu_event(app, event.id().as_ref()))
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                show_main(tray.app_handle());
+            }
+        });
+
+    if let Some(icon) = app.default_window_icon().cloned() {
+        builder = builder.icon(icon);
+    }
+
+    builder.build(app)?;
+    Ok(())
+}
+
+/// Rebuild the menu after accounts or the active selection change. Dispatched
+/// to the main thread since some platforms require menu edits there.
+pub fn rebuild(app: &AppHandle) {
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        if let Some(tray) = handle.tray_by_id("main") {
+            if let Ok(menu) = build_menu(&handle) {
+                let _ = tray.set_menu(Some(menu));
+            }
+        }
+    });
+}
