@@ -45,21 +45,23 @@ function App() {
 
   // On startup, load accounts and reconcile with the live SSH/git identity so
   // manual changes are reflected (and untracked identities can be imported).
+  // Then silently refresh the active profile's stats from GitHub if online.
   useEffect(() => {
-    invoke<Profile[]>("list_profiles")
-      .then(setProfiles)
-      .catch(() => {
-        /* empty list on failure */
-      });
-    invoke<ActiveState>("reconcile_active")
+    const profilesP = invoke<Profile[]>("list_profiles")
+      .then((list) => {
+        setProfiles(list);
+        return list;
+      })
+      .catch(() => [] as Profile[]);
+
+    const activeP = invoke<ActiveState>("reconcile_active")
       .then((s) => {
         if (s.matchedId) {
           setActiveId(s.matchedId);
-          return;
+          return s.matchedId;
         }
         // No live match: keep the last stored selection for the UI, and if
         // something IS in use that we don't track, offer to import it.
-        invoke<string | null>("get_active_profile").then(setActiveId).catch(() => {});
         if (s.unmanagedLogin || s.keyPath || s.gitEmail) {
           setUntracked({
             login: s.unmanagedLogin,
@@ -67,8 +69,26 @@ function App() {
             keyPath: s.keyPath,
           });
         }
+        return invoke<string | null>("get_active_profile")
+          .then((id) => {
+            setActiveId(id);
+            return id;
+          })
+          .catch(() => null);
       })
-      .catch(() => {});
+      .catch(() => null);
+
+    // Once both settle, refresh the active profile from GitHub (silent, best-effort).
+    Promise.all([profilesP, activeP]).then(([list, id]) => {
+      if (!id || list.length === 0) return;
+      invoke<Profile>("refresh_profile", { id })
+        .then((updated) =>
+          setProfiles((prev) => prev.map((p) => (p.id === id ? updated : p)))
+        )
+        .catch(() => {
+          /* offline or rate-limited – just keep cached data */
+        });
+    });
   }, []);
 
   // The tray can switch the active account too; keep the window in sync.
@@ -91,11 +111,20 @@ function App() {
     openAdd(untracked?.keyPath ?? "");
   }
 
-  async function handleSelect(id: string) {
-    // The real switch: writes global git config + the managed ~/.ssh/config block.
-    await invoke("activate_profile", { id });
+  function handleSelect(id: string) {
+    // Update UI immediately so the switch feels instant.
     setActiveId(id);
-    setUntracked(null); // we now own the github.com identity
+    setUntracked(null);
+
+    // Backend work (git config + SSH config) runs in the background.
+    invoke("activate_profile", { id }).catch(() => {});
+
+    // Silently refresh the newly-active profile's stats from GitHub.
+    invoke<Profile>("refresh_profile", { id })
+      .then((updated) =>
+        setProfiles((prev) => prev.map((p) => (p.id === id ? updated : p)))
+      )
+      .catch(() => {});
   }
 
   function handleDelete(id: string) {

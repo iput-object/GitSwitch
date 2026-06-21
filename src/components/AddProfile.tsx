@@ -23,6 +23,9 @@ export type StoredProfile = {
   avatar: string | null;
   keyPath: string;
   publicKey: string;
+  publicRepos: number | null;
+  followers: number | null;
+  commits: number | null;
 };
 
 type GeneratedKey = { keyPath: string; publicKey: string };

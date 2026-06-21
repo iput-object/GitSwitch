@@ -99,11 +99,15 @@ fn row_to_profile(row: &rusqlite::Row) -> rusqlite::Result<StoredProfile> {
         avatar: data_uri(blob, mime),
         key_path: row.get(7)?,
         public_key: row.get(8)?,
+        public_repos: row.get(9)?,
+        followers: row.get(10)?,
+        commits: row.get(11)?,
     })
 }
 
 const SELECT_COLS: &str = "id, display_name, git_name, git_email, github_login,
-     avatar_blob, avatar_mime, key_path, public_key";
+     avatar_blob, avatar_mime, key_path, public_key,
+     public_repos, followers, commits";
 
 fn read_one(conn: &Connection, id: &str) -> Result<StoredProfile, String> {
     conn.query_row(
@@ -199,11 +203,14 @@ pub fn add_profile(app: AppHandle, profile: NewProfile) -> Result<StoredProfile,
         None => (None, None),
     };
 
+    let stats = crate::github::overview(&profile.github_login);
+
     conn.execute(
         "INSERT INTO profiles
             (id, display_name, git_name, git_email, github_login,
-             avatar_blob, avatar_mime, key_path, public_key, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+             avatar_blob, avatar_mime, key_path, public_key, created_at,
+             public_repos, followers, commits)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
         params![
             id,
             profile.display_name,
@@ -215,6 +222,9 @@ pub fn add_profile(app: AppHandle, profile: NewProfile) -> Result<StoredProfile,
             profile.key_path,
             profile.public_key,
             now_nanos() as i64,
+            stats.public_repos,
+            stats.followers,
+            stats.commits,
         ],
     )
     .map_err(|e| format!("Could not save profile: {e}"))?;
@@ -229,6 +239,9 @@ pub fn add_profile(app: AppHandle, profile: NewProfile) -> Result<StoredProfile,
         avatar: data_uri(blob, mime),
         key_path: profile.key_path,
         public_key: profile.public_key,
+        public_repos: stats.public_repos,
+        followers: stats.followers,
+        commits: stats.commits,
     })
 }
 
@@ -261,8 +274,8 @@ pub fn delete_profile(app: AppHandle, id: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Re-pull the display title and avatar from GitHub for a saved profile.
-/// The committed email and key are left untouched.
+/// Re-pull the display title, avatar, and stats from GitHub for a saved
+/// profile. The committed email and key are left untouched.
 #[tauri::command]
 pub fn refresh_profile(app: AppHandle, id: String) -> Result<StoredProfile, String> {
     let conn = open(&app)?;
@@ -274,23 +287,34 @@ pub fn refresh_profile(app: AppHandle, id: String) -> Result<StoredProfile, Stri
         )
         .map_err(|e| format!("Profile not found: {e}"))?;
 
-    let (name, avatar_url) = crate::github::lookup(&login);
-    let title = name.unwrap_or_else(|| login.clone());
-    let avatar = avatar_url.as_deref().and_then(download_avatar);
+    let overview = crate::github::overview(&login);
+    let title = overview.name.unwrap_or_else(|| login.clone());
+    let avatar = overview.avatar_url.as_deref().and_then(download_avatar);
 
-    match &avatar {
-        Some((blob, mime)) => conn.execute(
-            "UPDATE profiles
-             SET display_name = ?1, git_name = ?2, avatar_blob = ?3, avatar_mime = ?4
-             WHERE id = ?5",
-            params![title, title, blob, mime, id],
-        ),
-        None => conn.execute(
-            "UPDATE profiles SET display_name = ?1, git_name = ?2 WHERE id = ?3",
-            params![title, title, id],
-        ),
-    }
+    // Stats always update; avatar only when we managed to fetch a new one.
+    conn.execute(
+        "UPDATE profiles
+         SET display_name = ?1, git_name = ?2,
+             public_repos = ?3, followers = ?4, commits = ?5
+         WHERE id = ?6",
+        params![
+            title,
+            title,
+            overview.public_repos,
+            overview.followers,
+            overview.commits,
+            id
+        ],
+    )
     .map_err(|e| format!("Could not update profile: {e}"))?;
+
+    if let Some((blob, mime)) = &avatar {
+        conn.execute(
+            "UPDATE profiles SET avatar_blob = ?1, avatar_mime = ?2 WHERE id = ?3",
+            params![blob, mime, id],
+        )
+        .map_err(|e| format!("Could not update avatar: {e}"))?;
+    }
 
     let updated = read_one(&conn, &id);
     crate::tray::rebuild(&app);
