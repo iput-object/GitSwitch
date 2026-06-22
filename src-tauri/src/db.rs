@@ -463,3 +463,26 @@ pub fn get_active_profile(app: AppHandle) -> Result<Option<String>, String> {
     .optional()
     .map_err(|e| format!("Could not read active profile: {e}"))
 }
+
+#[tauri::command]
+pub fn update_profile_details(
+    app: AppHandle,
+    id: String,
+    display_name: String,
+    git_email: String,
+) -> Result<(), String> {
+    let conn = open(&app)?;
+    conn.execute(
+        "UPDATE profiles SET display_name = ?1, git_name = ?1, git_email = ?2 WHERE id = ?3",
+        params![display_name, git_email, id],
+    )
+    .map_err(|e| format!("Could not update profile: {e}"))?;
+    
+    let active_id = get_active_profile(app.clone()).unwrap_or(None);
+    if active_id.as_deref() == Some(&id) {
+        let _ = activate(&app, &id);
+    }
+
+    crate::tray::rebuild(&app);
+    Ok(())
+}

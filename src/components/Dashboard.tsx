@@ -45,7 +45,7 @@ export default function Dashboard({ profiles, activeId }: DashboardProps) {
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-cyan-300">
+              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-primary-300">
                 {active.displayName.slice(0, 2).toUpperCase()}
               </div>
             )}

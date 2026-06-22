@@ -28,15 +28,15 @@ export default function Background({ px, py }: BackgroundProps) {
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       <motion.div
         style={{ x: aX, y: aY }}
-        className="absolute -top-28 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-sky-500/15 blur-[110px]"
+        className="absolute -top-28 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary-500/15 blur-[110px]"
       />
       <motion.div
         style={{ x: bX, y: bY }}
-        className="absolute -bottom-28 -right-16 h-64 w-64 rounded-full bg-cyan-400/10 blur-[100px]"
+        className="absolute -bottom-28 -right-16 h-64 w-64 rounded-full bg-primary-400/10 blur-[100px]"
       />
       <motion.div
         style={{ x: bX, y: aY }}
-        className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-cyan-500/10 blur-[100px]"
+        className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-primary-500/10 blur-[100px]"
       />
       <div className="absolute inset-0 opacity-[0.035] bg-[linear-gradient(rgba(255,255,255,0.6)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.6)_1px,transparent_1px)] bg-size-[26px_26px] mask-[radial-gradient(circle_at_50%_45%,black,transparent_70%)]" />
     </div>

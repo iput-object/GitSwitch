@@ -1,1 +1,43 @@
 @import "tailwindcss";
+
+@theme {
+  --color-primary-200: var(--color-brand-200);
+  --color-primary-300: var(--color-brand-300);
+  --color-primary-400: var(--color-brand-400);
+  --color-primary-500: var(--color-brand-500);
+}
+
+:root {
+  /* Centralized UI Color Scheme (Cyan/Sky by default) */
+  --color-brand-200: #bae6fd; /* sky-200 */
+  --color-brand-300: #67e8f9; /* cyan-300 */
+  --color-brand-400: #22d3ee; /* cyan-400 */
+  --color-brand-500: #06b6d4; /* cyan-500 */
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+/* Ensure all buttons have a pointer cursor */
+button {
+  cursor: pointer;
+}

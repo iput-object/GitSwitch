@@ -2,9 +2,6 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   motion,
-  useMotionValue,
-  useSpring,
-  useTransform,
   useReducedMotion,
   type Variants,
 } from "motion/react";
@@ -35,12 +32,12 @@ const EASE = [0.16, 1, 0.3, 1] as const;
 
 const container: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.08, delayChildren: 0.12 } },
+  show: { transition: { staggerChildren: 0.05, delayChildren: 0.04 } },
 };
 
 const item: Variants = {
-  hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } },
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } },
 };
 
 export default function Welcome({ onContinue }: WelcomeProps) {
@@ -63,71 +60,24 @@ export default function Welcome({ onContinue }: WelcomeProps) {
       ? host.username.charAt(0).toUpperCase() + host.username.slice(1)
       : "there";
 
-  // --- Pointer field: drives parallax + avatar tilt (motion values, never state) ---
-  const px = useMotionValue(0); // -0.5 .. 0.5 across the surface
-  const py = useMotionValue(0);
-  const sx = useSpring(px, { stiffness: 120, damping: 20, mass: 0.4 });
-  const sy = useSpring(py, { stiffness: 120, damping: 20, mass: 0.4 });
-
-  const avatarRotY = useTransform(sx, (v) => v * 16); // deg
-  const avatarRotX = useTransform(sy, (v) => v * -16);
-  const avatarShiftX = useTransform(sx, (v) => v * 10);
-  const avatarShiftY = useTransform(sy, (v) => v * 10);
-
-  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (reduce) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    px.set((e.clientX - r.left) / r.width - 0.5);
-    py.set((e.clientY - r.top) / r.height - 0.5);
-  }
-  function handlePointerLeave() {
-    px.set(0);
-    py.set(0);
-  }
-
-  // --- Magnetic Continue button ---
-  const bx = useMotionValue(0);
-  const by = useMotionValue(0);
-  const bsx = useSpring(bx, { stiffness: 220, damping: 14, mass: 0.3 });
-  const bsy = useSpring(by, { stiffness: 220, damping: 14, mass: 0.3 });
-
-  function handleBtnMove(e: React.PointerEvent<HTMLButtonElement>) {
-    if (reduce) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    bx.set((e.clientX - (r.left + r.width / 2)) * 0.35);
-    by.set((e.clientY - (r.top + r.height / 2)) * 0.35);
-  }
-  function handleBtnLeave() {
-    bx.set(0);
-    by.set(0);
-  }
-
   return (
     <motion.div
       data-tauri-drag-region
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerLeave}
       variants={container}
       initial={reduce ? false : "hidden"}
       animate="show"
       className="relative flex-1 flex flex-col items-center justify-center
-                 overflow-hidden px-8 text-center [perspective:1000px]"
+                 overflow-hidden px-8 text-center"
     >
-      {/* Avatar with pointer-driven 3D tilt */}
+      {/* Avatar */}
       <motion.div
         variants={item}
-        style={{
-          rotateX: avatarRotX,
-          rotateY: avatarRotY,
-          x: avatarShiftX,
-          y: avatarShiftY,
-        }}
-        className="relative mb-6 [transform-style:preserve-3d]"
+        className="relative mb-6"
       >
-        <div className="absolute inset-0 rounded-full bg-sky-400/30 blur-xl" />
+        <div className="absolute inset-0 rounded-full bg-primary-400/30 blur-xl" />
         <div
           className="relative flex h-20 w-20 items-center justify-center overflow-hidden
-                     rounded-full bg-neutral-800 ring-2 ring-sky-400/40
+                     rounded-full bg-neutral-800 ring-2 ring-primary-400/40
                      ring-offset-2 ring-offset-neutral-950"
         >
           {host.avatar ? (
@@ -137,7 +87,7 @@ export default function Welcome({ onContinue }: WelcomeProps) {
               className="h-full w-full object-cover"
             />
           ) : (
-            <span className="bg-linear-to-br from-sky-200 to-cyan-400 bg-clip-text text-2xl font-semibold text-transparent">
+            <span className="bg-linear-to-br from-primary-200 to-primary-400 bg-clip-text text-2xl font-semibold text-transparent">
               {initials(host.username)}
             </span>
           )}
@@ -146,7 +96,7 @@ export default function Welcome({ onContinue }: WelcomeProps) {
 
       <motion.p
         variants={item}
-        className="relative mb-2 text-xs uppercase tracking-[0.2em] text-cyan-300/80"
+        className="relative mb-2 text-xs uppercase tracking-[0.2em] text-primary-300/80"
       >
         Welcome back
       </motion.p>
@@ -164,17 +114,13 @@ export default function Welcome({ onContinue }: WelcomeProps) {
         single click, straight from your tray.
       </motion.p>
 
-      {/* Magnetic CTA. Entrance on the wrapper, magnetism on the button. */}
+      {/* CTA Button */}
       <motion.div variants={item}>
-        <motion.button
+        <button
           onClick={onContinue}
-          onPointerMove={handleBtnMove}
-          onPointerLeave={handleBtnLeave}
-          style={{ x: bsx, y: bsy }}
-          whileTap={{ scale: 0.97 }}
           className="group relative inline-flex items-center gap-2 overflow-hidden
-                     rounded-full bg-linear-to-br from-sky-400 to-cyan-500 px-7 py-3
-                     text-sm font-semibold text-neutral-950
+                     rounded-full bg-linear-to-br from-primary-400 to-primary-500 px-7 py-3
+                     text-sm font-semibold text-neutral-950 cursor-pointer
                      transition-[filter] hover:brightness-105"
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
@@ -184,7 +130,7 @@ export default function Welcome({ onContinue }: WelcomeProps) {
             size={15}
             className="relative transition-transform group-hover:translate-x-0.5"
           />
-        </motion.button>
+        </button>
       </motion.div>
     </motion.div>
   );

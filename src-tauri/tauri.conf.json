@@ -13,7 +13,7 @@
     "windows": [
       {
         "title": "gitswitch",
-        "width": 800,
+        "width": 960,
         "height": 600,
         "center": true,
         "decorations": false,

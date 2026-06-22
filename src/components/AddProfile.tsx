@@ -181,7 +181,7 @@ export default function AddProfile({
       >
         <motion.div
           variants={item}
-          className="relative mb-5 h-20 w-20 overflow-hidden rounded-full bg-neutral-800 ring-2 ring-sky-400/40 ring-offset-2 ring-offset-neutral-950"
+          className="relative mb-5 h-20 w-20 overflow-hidden rounded-full bg-neutral-800 ring-2 ring-primary-400/40 ring-offset-2 ring-offset-neutral-950"
         >
           {account.avatarUrl ? (
             <img
@@ -190,7 +190,7 @@ export default function AddProfile({
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-cyan-300">
+            <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-primary-300">
               {name.slice(0, 2).toUpperCase()}
             </div>
           )}
@@ -204,7 +204,7 @@ export default function AddProfile({
         </motion.h1>
         <motion.p
           variants={item}
-          className="relative mt-1 text-sm text-cyan-300/80"
+          className="relative mt-1 text-sm text-primary-300/80"
         >
           @{account.login}
         </motion.p>
@@ -222,7 +222,7 @@ export default function AddProfile({
             onChange={(e) => setEmail(e.target.value)}
             className="w-full rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5
                        text-sm text-neutral-100 outline-none transition-colors
-                       focus:border-sky-400/50 focus:bg-white/[0.07]"
+                       focus:border-primary-400/50 focus:bg-white/[0.07]"
           />
           <span className="mt-1.5 block text-xs text-neutral-500">
             Pre-filled from GitHub. Edit it if you commit under a different
@@ -239,7 +239,7 @@ export default function AddProfile({
                      rounded-full py-3 text-sm font-semibold transition-[filter] hover:brightness-105 ${
                        error
                          ? "bg-rose-500 text-white"
-                         : "bg-linear-to-br from-sky-400 to-cyan-500 text-neutral-950 disabled:opacity-70"
+                         : "bg-linear-to-br from-primary-400 to-primary-500 text-neutral-950 disabled:opacity-70"
                      }`}
         >
           {saving ? (
@@ -300,7 +300,7 @@ export default function AddProfile({
         <div
           className="flex h-12 items-center gap-1.5 rounded-full border border-white/10
                      bg-white/5 pl-5 pr-1.5 transition-colors
-                     focus-within:border-sky-400/50 focus-within:bg-white/[0.07]"
+                     focus-within:border-primary-400/50 focus-within:bg-white/[0.07]"
         >
           <textarea
             rows={1}
@@ -324,7 +324,7 @@ export default function AddProfile({
               onClick={handleCreate}
               disabled={generating}
               className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/5
-                         px-3 py-1.5 text-xs font-medium text-cyan-300 ring-1 ring-white/10
+                         px-3 py-1.5 text-xs font-medium text-primary-300 ring-1 ring-white/10
                          transition-colors hover:bg-white/10 disabled:opacity-60"
             >
               {generating ? (
@@ -345,7 +345,7 @@ export default function AddProfile({
             </span>
           )}
           {kind === "key" && (
-            <span className="text-xs text-cyan-300/80">
+            <span className="text-xs text-primary-300/80">
               Private key detected. We&apos;ll store it in ~/.ssh.
             </span>
           )}
@@ -366,7 +366,7 @@ export default function AddProfile({
             </span>
             <button
               onClick={handleCopy}
-              className="inline-flex items-center gap-1 text-xs font-medium text-cyan-300 hover:text-cyan-200"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary-300 hover:text-cyan-200"
             >
               {copied ? (
                 <Check size={12} weight="bold" />
@@ -397,7 +397,7 @@ export default function AddProfile({
                    rounded-full py-3 text-sm font-semibold transition-[filter] hover:brightness-105 ${
                      error
                        ? "bg-rose-500 text-white"
-                       : "bg-linear-to-br from-sky-400 to-cyan-500 text-neutral-950 " +
+                       : "bg-linear-to-br from-primary-400 to-primary-500 text-neutral-950 " +
                          "disabled:from-neutral-800 disabled:to-neutral-800 disabled:text-neutral-500 disabled:brightness-100"
                    }`}
       >

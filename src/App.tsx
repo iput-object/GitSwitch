@@ -2,14 +2,19 @@ import "./styles/global.css";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { openUrl, openPath } from "@tauri-apps/plugin-opener";
+import { homeDir, join } from "@tauri-apps/api/path";
 import { useMotionValue, useReducedMotion } from "motion/react";
 import Background from "./components/Background";
 import Navbar from "./components/Navbar";
+import Sidebar from "./components/Sidebar";
 import Welcome from "./components/Welcome";
 import AddProfile, { type StoredProfile } from "./components/AddProfile";
 import Profiles from "./components/Profiles";
+import SSHKeys from "./components/SSHKeys";
+import Settings from "./components/Settings";
 
-type Screen = "welcome" | "add-profile" | "profiles";
+type Screen = "welcome" | "add-profile" | "profiles" | "ssh-keys" | "settings";
 
 type Profile = StoredProfile;
 
@@ -30,9 +35,6 @@ export type Untracked = {
 const ONBOARDED_KEY = "gitswitch.onboarded";
 
 function App() {
-  // Welcome is a one-time, first-open screen. After the user gets past it
-  // once, we remember that and go straight to their profiles next launch.
-  // During development we always start on Welcome so it's easy to iterate on.
   const [screen, setScreen] = useState<Screen>(() =>
     !import.meta.env.DEV && localStorage.getItem(ONBOARDED_KEY)
       ? "profiles"
@@ -43,9 +45,6 @@ function App() {
   const [untracked, setUntracked] = useState<Untracked | null>(null);
   const [pendingInput, setPendingInput] = useState("");
 
-  // On startup, load accounts and reconcile with the live SSH/git identity so
-  // manual changes are reflected (and untracked identities can be imported).
-  // Then silently refresh the active profile's stats from GitHub if online.
   useEffect(() => {
     const profilesP = invoke<Profile[]>("list_profiles")
       .then((list) => {
@@ -60,8 +59,6 @@ function App() {
           setActiveId(s.matchedId);
           return s.matchedId;
         }
-        // No live match: keep the last stored selection for the UI, and if
-        // something IS in use that we don't track, offer to import it.
         if (s.unmanagedLogin || s.keyPath || s.gitEmail) {
           setUntracked({
             login: s.unmanagedLogin,
@@ -78,21 +75,26 @@ function App() {
       })
       .catch(() => null);
 
-    // Once both settle, refresh the active profile from GitHub (silent, best-effort).
     Promise.all([profilesP, activeP]).then(([list, id]) => {
       if (!id || list.length === 0) return;
       invoke<Profile>("refresh_profile", { id })
         .then((updated) =>
           setProfiles((prev) => prev.map((p) => (p.id === id ? updated : p)))
         )
-        .catch(() => {
-          /* offline or rate-limited – just keep cached data */
-        });
+        .catch(() => {});
     });
   }, []);
 
-  // The tray can switch the active account too; keep the window in sync.
   useEffect(() => {
+    import("@tauri-apps/api/tray").then(({ TrayIcon }) => {
+      const showTray = localStorage.getItem("gitswitch.showTrayIcon") !== "false";
+      if (!showTray) {
+        TrayIcon.getById("main").then((tray) => {
+          if (tray) tray.setVisible(false);
+        }).catch(() => {});
+      }
+    });
+
     const unlisten = listen<string>("active-changed", (e) => {
       setActiveId(e.payload);
       setUntracked(null);
@@ -112,14 +114,11 @@ function App() {
   }
 
   function handleSelect(id: string) {
-    // Update UI immediately so the switch feels instant.
     setActiveId(id);
     setUntracked(null);
 
-    // Backend work (git config + SSH config) runs in the background.
     invoke("activate_profile", { id }).catch(() => {});
 
-    // Silently refresh the newly-active profile's stats from GitHub.
     invoke<Profile>("refresh_profile", { id })
       .then((updated) =>
         setProfiles((prev) => prev.map((p) => (p.id === id ? updated : p)))
@@ -128,7 +127,7 @@ function App() {
   }
 
   function handleDelete(id: string) {
-    if (id === activeId) return; // never remove the active account
+    if (id === activeId) return;
     setProfiles((prev) => prev.filter((p) => p.id !== id));
     invoke("delete_profile", { id }).catch(() => {});
   }
@@ -138,7 +137,43 @@ function App() {
     setProfiles((prev) => prev.map((p) => (p.id === id ? updated : p)));
   }
 
-  // Window-wide pointer field, feeding the shared ambient background.
+  async function handleRefreshAll() {
+    for (const p of profiles) {
+      await handleRefresh(p.id).catch(() => {});
+    }
+  }
+
+  async function handleUpdateProfile(id: string, displayName: string, gitEmail: string) {
+    try {
+      await invoke("update_profile_details", { id, displayName, gitEmail });
+      setProfiles((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, displayName, gitEmail } : p))
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function handleOpenGitHub() {
+    const active = profiles.find((p) => p.id === activeId);
+    if (active && active.githubLogin) {
+      openUrl(`https://github.com/${active.githubLogin}`).catch(() => {});
+    } else {
+      openUrl("https://github.com").catch(() => {});
+    }
+  }
+
+  async function handleOpenSSH() {
+    try {
+      const home = await homeDir();
+      const sshFolder = await join(home, ".ssh");
+      await openPath(sshFolder);
+    } catch (err) {
+      alert(String(err));
+      console.error(err);
+    }
+  }
+
   const reduce = useReducedMotion();
   const px = useMotionValue(0);
   const py = useMotionValue(0);
@@ -160,8 +195,7 @@ function App() {
 
   function handleSaveProfile(profile: Profile) {
     setProfiles((prev) => [...prev, profile]);
-    setUntracked(null); // the imported/added identity is now tracked
-    // First account added becomes the active one by default (real switch).
+    setUntracked(null);
     setActiveId((current) => {
       if (current) return current;
       invoke("activate_profile", { id: profile.id }).catch(() => {});
@@ -170,43 +204,72 @@ function App() {
     setScreen("profiles");
   }
 
+  const showLayout = screen !== "welcome" && screen !== "add-profile";
+
   return (
     <div
       onPointerMove={handlePointer}
       onPointerLeave={resetPointer}
-      className="relative h-screen w-screen bg-neutral-950 rounded-2xl overflow-hidden flex flex-col"
+      className="relative h-screen w-screen bg-neutral-950 rounded-2xl overflow-hidden flex flex-col font-sans"
     >
       <Background px={px} py={py} />
 
-      <div className="relative flex min-h-0 flex-1 flex-col">
-        {screen !== "welcome" && <Navbar />}
+      {/* Navbar is always visible unless on welcome/add-profile (though we could show it there too, let's keep it clean) */}
+      {showLayout && (
+        <Navbar 
+          onAdd={() => openAdd()}
+          onRefresh={handleRefreshAll}
+          onSettings={() => setScreen("settings")}
+        />
+      )}
 
-        {screen === "welcome" && (
-          <Welcome onContinue={completeWelcome} />
+      <div className="relative flex min-h-0 flex-1">
+        {showLayout && (
+          <Sidebar
+            activePage={screen}
+            onNavigate={(page) => setScreen(page as Screen)}
+            onOpenGitHub={handleOpenGitHub}
+            onOpenSSH={handleOpenSSH}
+            onRefreshAll={handleRefreshAll}
+          />
         )}
 
-      {screen === "add-profile" && (
-        <AddProfile
-          initialInput={pendingInput}
-          existingLogins={profiles.map((p) => p.githubLogin)}
-          showCancel={profiles.length > 0}
-          onCancel={() => setScreen("profiles")}
-          onSave={handleSaveProfile}
-        />
-      )}
+        <div className="flex-1 flex flex-col min-w-0 bg-transparent">
+          {screen === "welcome" && <Welcome onContinue={completeWelcome} />}
 
-      {screen === "profiles" && (
-        <Profiles
-          profiles={profiles}
-          activeId={activeId}
-          untracked={untracked}
-          onAdd={() => openAdd()}
-          onImport={handleImport}
-          onSelect={handleSelect}
-          onDelete={handleDelete}
-          onRefresh={handleRefresh}
-        />
-      )}
+          {screen === "add-profile" && (
+            <AddProfile
+              initialInput={pendingInput}
+              existingLogins={profiles.map((p) => p.githubLogin)}
+              showCancel={profiles.length > 0}
+              onCancel={() => setScreen("profiles")}
+              onSave={handleSaveProfile}
+            />
+          )}
+
+          {screen === "profiles" && (
+            <Profiles
+              profiles={profiles}
+              activeId={activeId}
+              untracked={untracked}
+              onAdd={() => openAdd()}
+              onImport={handleImport}
+              onSelect={handleSelect}
+              onDelete={handleDelete}
+              onRefresh={handleRefresh}
+              onUpdate={handleUpdateProfile}
+              onOpenGitHub={handleOpenGitHub}
+            />
+          )}
+
+          {screen === "ssh-keys" && (
+            <SSHKeys profiles={profiles} />
+          )}
+
+          {screen === "settings" && (
+            <Settings />
+          )}
+        </div>
       </div>
     </div>
   );
