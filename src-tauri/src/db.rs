@@ -274,6 +274,16 @@ pub fn delete_profile(app: AppHandle, id: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+pub fn delete_all_profiles(app: AppHandle) -> Result<(), String> {
+    let conn = open(&app)?;
+    conn.execute("DELETE FROM profiles", params![])
+        .map_err(|e| format!("Could not delete profiles: {e}"))?;
+    let _ = clear_setting(&conn, ACTIVE_KEY);
+    crate::tray::rebuild(&app);
+    Ok(())
+}
+
 /// Re-pull the display title, avatar, and stats from GitHub for a saved
 /// profile. The committed email and key are left untouched.
 #[tauri::command]
@@ -477,7 +487,7 @@ pub fn update_profile_details(
         params![display_name, git_email, id],
     )
     .map_err(|e| format!("Could not update profile: {e}"))?;
-    
+
     let active_id = get_active_profile(app.clone()).unwrap_or(None);
     if active_id.as_deref() == Some(&id) {
         let _ = activate(&app, &id);

@@ -211,7 +211,7 @@ export default function AddProfile({
 
         <motion.label
           variants={item}
-          className="relative mt-7 block w-full max-w-[340px] text-left"
+          className="relative mt-7 block w-full max-w-85 text-left"
         >
           <span className="mb-1.5 block text-xs font-medium text-neutral-400">
             Commit email
@@ -235,7 +235,7 @@ export default function AddProfile({
           onClick={handleSave}
           disabled={saving}
           whileTap={{ scale: 0.98 }}
-          className={`relative mt-6 inline-flex w-full max-w-[340px] items-center justify-center gap-2
+          className={`relative mt-6 inline-flex w-full max-w-85 items-center justify-center gap-2
                      rounded-full py-3 text-sm font-semibold transition-[filter] hover:brightness-105 ${
                        error
                          ? "bg-rose-500 text-white"
@@ -249,11 +249,15 @@ export default function AddProfile({
           ) : (
             <Check size={16} weight="bold" />
           )}
-          {saving ? "Saving" : error ? "Couldn't save, try again" : "Save account"}
+          {saving
+            ? "Saving"
+            : error
+              ? "Couldn't save, try again"
+              : "Save account"}
         </motion.button>
 
         {error && !saving && (
-          <p className="relative mt-2.5 max-w-[340px] text-xs leading-relaxed text-rose-300/90">
+          <p className="relative mt-2.5 max-w-85 text-xs leading-relaxed text-rose-300/90">
             {error}
           </p>
         )}
@@ -293,10 +297,7 @@ export default function AddProfile({
 
       {/* The one smart input: a path or a pasted private key.
           Wrapper is the field; the input flexes to fill, the button caps it. */}
-      <motion.div
-        variants={item}
-        className="mt-6 w-full max-w-[340px] text-left"
-      >
+      <motion.div variants={item} className="mt-6 w-full max-w-85 text-left">
         <div
           className="flex h-12 items-center gap-1.5 rounded-full border border-white/10
                      bg-white/5 pl-5 pr-1.5 transition-colors
@@ -358,7 +359,7 @@ export default function AddProfile({
           initial={reduce ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE }}
-          className="relative mt-3 w-full max-w-[340px] rounded-xl border border-white/10 bg-white/[0.03] p-3 text-left"
+          className="relative mt-3 w-full max-w-85 rounded-xl border border-white/10 bg-white/3 p-3 text-left"
         >
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-medium text-neutral-300">
@@ -393,7 +394,7 @@ export default function AddProfile({
         onClick={handleSync}
         disabled={syncing || kind === "empty"}
         whileTap={{ scale: 0.98 }}
-        className={`relative mt-6 inline-flex w-full max-w-[340px] items-center justify-center gap-2
+        className={`relative mt-1 inline-flex w-full max-w-85 items-center justify-center gap-2
                    rounded-full py-3 text-sm font-semibold transition-[filter] hover:brightness-105 ${
                      error
                        ? "bg-rose-500 text-white"
@@ -408,11 +409,15 @@ export default function AddProfile({
         ) : (
           <ArrowsClockwise size={16} weight="bold" />
         )}
-        {syncing ? "Syncing" : error ? "Couldn't sync, try again" : "Sync from GitHub"}
+        {syncing
+          ? "Syncing"
+          : error
+            ? "Couldn't sync, try again"
+            : "Sync from GitHub"}
       </motion.button>
 
       {error && !syncing && (
-        <p className="relative mt-2.5 max-w-[340px] text-xs leading-relaxed text-rose-300/90">
+        <p className="relative mt-2.5 max-w-85 text-xs leading-relaxed text-rose-300/90">
           {error}
         </p>
       )}

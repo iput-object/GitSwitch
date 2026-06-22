@@ -49,7 +49,10 @@ fn fetch_profile(login: &str) -> Profile {
 
     match json {
         Some(json) => Profile {
-            name: json.get("name").and_then(|v| v.as_str()).map(str::to_string),
+            name: json
+                .get("name")
+                .and_then(|v| v.as_str())
+                .map(str::to_string),
             avatar_url: json
                 .get("avatar_url")
                 .and_then(|v| v.as_str())

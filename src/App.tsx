@@ -201,6 +201,13 @@ function App() {
     setScreen("profiles");
   }
 
+  async function handleClearAllProfiles() {
+    setProfiles([]);
+    setActiveId(null);
+    setUntracked(null);
+    setScreen("welcome");
+  }
+
   const showLayout = screen !== "welcome" && screen !== "add-profile";
 
   return (
@@ -264,7 +271,7 @@ function App() {
           )}
 
           {screen === "settings" && (
-            <Settings />
+            <Settings onClearAllProfiles={handleClearAllProfiles} />
           )}
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
+import { invoke } from "@tauri-apps/api/core";
 import { TrayIcon } from "@tauri-apps/api/tray";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 
@@ -48,9 +49,14 @@ function Toggle({ label, description, checked, onChange }: ToggleProps) {
   );
 }
 
-export default function Settings() {
+type SettingsProps = {
+  onClearAllProfiles: () => void;
+};
+
+export default function Settings({ onClearAllProfiles }: SettingsProps) {
   const reduce = useReducedMotion();
   const [autostart, setAutostart] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [showTrayIcon, setShowTrayIcon] = useState(() => {
     return localStorage.getItem("gitswitch.showTrayIcon") !== "false";
   });
@@ -86,6 +92,16 @@ export default function Settings() {
     }
   };
 
+  const handleDeleteAllProfiles = async () => {
+    try {
+      await invoke("delete_all_profiles");
+      onClearAllProfiles();
+    } catch (err) {
+      console.error(err);
+      alert(String(err));
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col px-6 py-5 overflow-y-auto">
       <motion.div
@@ -118,6 +134,43 @@ export default function Settings() {
               checked={showTrayIcon}
               onChange={handleTrayChange}
             />
+          </div>
+          <div className="my-3">
+            <h3 className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
+              Danger
+            </h3>
+          </div>
+
+          <div className="rounded-xl border border-white/6 bg-white/2 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col pr-4">
+                <span className="text-sm font-medium text-neutral-200">Delete All Profiles</span>
+                <span className="text-xs text-neutral-500 mt-0.5">This action cannot be undone. All profiles will be permanently deleted.</span>
+              </div>
+              {confirmDelete ? (
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAllProfiles}
+                    className="rounded-md border border-red-500/50 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
+                  >
+                    Confirm Delete
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="shrink-0 rounded-md border border-red-500/50 bg-transparent px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                >
+                  Delete All
+                </button>
+              )}
+            </div>
           </div>
         </motion.section>
       </motion.div>

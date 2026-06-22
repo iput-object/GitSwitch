@@ -203,7 +203,11 @@ pub fn commit_key(key_path: String, login: String) -> Result<String, String> {
         .chars()
         .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_')
         .collect();
-    let base = if safe.is_empty() { "github".into() } else { safe };
+    let base = if safe.is_empty() {
+        "github".into()
+    } else {
+        safe
+    };
 
     let mut dest = dir.join(format!("gitswitch_{base}"));
     if dest.exists() {
@@ -271,7 +275,10 @@ pub fn ssh_identify(key_path: &Path) -> Result<String, String> {
     if text.contains("Permission denied") {
         return Err("GitHub did not recognize this key yet. Add the public key to your GitHub account, then sync again.".to_string());
     }
-    Err(format!("Could not verify the key with GitHub.\n{}", text.trim()))
+    Err(format!(
+        "Could not verify the key with GitHub.\n{}",
+        text.trim()
+    ))
 }
 
 /// Remove the GitSwitch-managed block (between markers), leaving everything
@@ -352,8 +359,7 @@ pub fn apply_ssh_config(key_path: &str) -> Result<(), String> {
         content.push('\n');
     }
 
-    std::fs::write(&config, content)
-        .map_err(|e| format!("Could not write ~/.ssh/config: {e}"))?;
+    std::fs::write(&config, content).map_err(|e| format!("Could not write ~/.ssh/config: {e}"))?;
     set_mode(&config, 0o600);
     Ok(())
 }
