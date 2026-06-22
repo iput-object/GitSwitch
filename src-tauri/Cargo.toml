@@ -1,6 +1,6 @@
 [package]
 name = "gitswitch"
-version = "0.1.0"
+version = "1.0.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -26,4 +26,5 @@ base64 = "0.22"
 ureq = { version = "2", features = ["json"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 tauri-plugin-autostart = "2.5.1"
+tauri-plugin-updater = "2.10.1"
 

@@ -1,3 +1,4 @@
+import * as React from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   Users,
@@ -30,6 +31,39 @@ export default function Sidebar({
   onOpenSSH,
   onRefreshAll,
 }: SidebarProps) {
+  const [appVersion, setAppVersion] = React.useState("0.1.0");
+  const [updateAvailable, setUpdateAvailable] = React.useState<any>(null);
+  const [isUpdating, setIsUpdating] = React.useState(false);
+
+  React.useEffect(() => {
+    import('@tauri-apps/api/app').then(m => m.getVersion().then(setAppVersion)).catch(console.error);
+
+    import('@tauri-apps/plugin-updater').then(async (m) => {
+      try {
+        const update = await m.check();
+        if (update) {
+          setUpdateAvailable(update);
+        }
+      } catch (e) {
+        console.error("Update check failed:", e);
+      }
+    }).catch(console.error);
+  }, []);
+
+  const handleUpdateClick = async () => {
+    if (!updateAvailable) return;
+    setIsUpdating(true);
+    try {
+      await updateAvailable.downloadAndInstall();
+      alert("Update installed! Please restart GitSwitch to apply the new version.");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to install update.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return (
     <aside className="flex h-full w-56 flex-col border-r border-white/6 bg-white/2 px-3 py-4">
       {/* Navigation */}
@@ -89,19 +123,24 @@ export default function Sidebar({
 
       {/* Version info */}
       <div
-        onClick={() =>
-          openUrl("https://github.com/iput-object/GitSwitch").catch(
-            console.error,
-          )
-        }
-        className="mt-auto flex items-center gap-2 px-2.5 cursor-pointer"
+        className="mt-auto flex items-center gap-2 px-2.5"
       >
-        <span className="h-2 w-2 rounded-full bg-emerald-400" />
-        <div>
-          <p className="text-xs font-medium text-neutral-300">
-            GitSwitch v0.1.0
+        <span className={`h-2 w-2 rounded-full ${updateAvailable ? "bg-amber-400 animate-pulse" : "bg-emerald-400"}`} />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-neutral-300 cursor-pointer hover:underline" onClick={() => openUrl("https://github.com/iput-object/GitSwitch").catch(console.error)}>
+            GitSwitch v{appVersion}
           </p>
-          <p className="text-[10px] text-neutral-500">Up to date</p>
+          {updateAvailable ? (
+            <button 
+              onClick={handleUpdateClick}
+              disabled={isUpdating}
+              className="text-[10px] text-amber-400 font-semibold text-left truncate transition hover:brightness-110 disabled:opacity-50"
+            >
+              {isUpdating ? "Installing..." : "Update Available!"}
+            </button>
+          ) : (
+            <p className="text-[10px] text-neutral-500">Up to date</p>
+          )}
         </div>
       </div>
     </aside>
