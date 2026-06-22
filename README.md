@@ -1,5 +1,7 @@
 # GitSwitch
 
+<img src="https://i.imgur.com/7fIm5eT.png"/>
+
 GitSwitch is a fast, lightweight desktop application built with Tauri and React that allows developers to seamlessly manage and switch between multiple Git profiles and SSH keys.
 
 ## Features
