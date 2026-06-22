@@ -1,5 +1,5 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { GithubLogo, Plus, ArrowsClockwise, Gear, Minus, X } from "@phosphor-icons/react";
+import { Plus, ArrowsClockwise, Gear, Minus, X } from "@phosphor-icons/react";
 
 import logoLight from "../assets/logo_light.svg";
 import logoDark from "../assets/logo_dark.svg";
