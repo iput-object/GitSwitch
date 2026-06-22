@@ -2,8 +2,7 @@ import "./styles/global.css";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { openUrl, openPath } from "@tauri-apps/plugin-opener";
-import { homeDir, join } from "@tauri-apps/api/path";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useMotionValue, useReducedMotion } from "motion/react";
 import Background from "./components/Background";
 import Navbar from "./components/Navbar";
@@ -165,9 +164,7 @@ function App() {
 
   async function handleOpenSSH() {
     try {
-      const home = await homeDir();
-      const sshFolder = await join(home, ".ssh");
-      await openPath(sshFolder);
+      await invoke("open_ssh_folder");
     } catch (err) {
       alert(String(err));
       console.error(err);

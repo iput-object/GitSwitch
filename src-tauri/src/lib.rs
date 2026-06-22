@@ -30,6 +30,7 @@ pub fn run() {
             host::get_host_info,
             ssh::generate_ssh_key,
             ssh::commit_key,
+            ssh::open_ssh_folder,
             github::sync_github,
             db::add_profile,
             db::list_profiles,

@@ -34,6 +34,15 @@ fn ssh_dir() -> Result<PathBuf, String> {
     Ok(dir)
 }
 
+#[tauri::command]
+pub fn open_ssh_folder(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let dir = ssh_dir()?;
+    app.opener()
+        .open_path(dir.to_string_lossy().into_owned(), None::<String>)
+        .map_err(|e| format!("Could not open folder: {e}"))
+}
+
 fn stamp() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let n = SystemTime::now()
