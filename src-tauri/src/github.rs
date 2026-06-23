@@ -17,6 +17,7 @@ pub struct GithubAccount {
     pub managed: bool,
 }
 
+#[derive(Default)]
 struct Profile {
     name: Option<String>,
     avatar_url: Option<String>,
@@ -66,19 +67,6 @@ fn fetch_profile(login: &str) -> Profile {
             followers: json.get("followers").and_then(|v| v.as_u64()),
         },
         None => Profile::default(),
-    }
-}
-
-impl Default for Profile {
-    fn default() -> Self {
-        Profile {
-            name: None,
-            avatar_url: None,
-            email: None,
-            id: None,
-            public_repos: None,
-            followers: None,
-        }
     }
 }
 

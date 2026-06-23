@@ -110,7 +110,7 @@ pub fn current_github_key() -> Option<PathBuf> {
     None
 }
 
-fn expand_path(input: &str) -> PathBuf {
+pub fn expand_path(input: &str) -> PathBuf {
     let trimmed = input.trim();
     if let Some(rest) = trimmed.strip_prefix("~/") {
         if let Some(home) = paths::home() {

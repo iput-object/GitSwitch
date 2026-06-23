@@ -92,6 +92,12 @@ pub fn rebuild(app: &AppHandle) {
             if let Ok(menu) = build_menu(&handle) {
                 let _ = tray.set_menu(Some(menu));
             }
+            // set_menu makes libappindicator (Linux) re-register the tray item,
+            // which drops the icon -> GNOME shows its "⋮" placeholder / a ghost
+            // duplicate. Re-apply the icon so it survives every rebuild.
+            if let Some(icon) = handle.default_window_icon().cloned() {
+                let _ = tray.set_icon(Some(icon));
+            }
         }
     });
 }

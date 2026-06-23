@@ -49,7 +49,6 @@ pub fn run() {
             db::delete_profile,
             db::delete_all_profiles,
             db::refresh_profile,
-            db::set_active_profile,
             db::get_active_profile,
             db::reconcile_active,
             db::activate_profile,

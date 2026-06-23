@@ -7,7 +7,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::io::Read;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -348,7 +348,33 @@ pub fn activate(app: &AppHandle, id: &str) -> Result<(), String> {
     crate::git::set_global("user.email", &git_email)?;
     crate::ssh::apply_ssh_config(&key_path)?;
 
-    set_setting(&conn, ACTIVE_KEY, id)
+    set_setting(&conn, ACTIVE_KEY, id)?;
+    verify_active(app, git_name, git_email, key_path);
+    Ok(())
+}
+
+/// Best-effort, off the critical path: read the live identity back and confirm
+/// it matches what we just wrote (a write can exit 0 yet not land, e.g. another
+/// process clobbers ~/.ssh/config). Runs in a thread so it never slows a switch;
+/// on mismatch it emits "switch-unverified" for the UI to surface, nothing more.
+fn verify_active(app: &AppHandle, git_name: String, git_email: String, key_path: String) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let problem = if crate::git::global("user.name").as_deref() != Some(&git_name) {
+            Some("git user.name")
+        } else if crate::git::global("user.email").as_deref() != Some(&git_email) {
+            Some("git user.email")
+        } else if crate::ssh::current_github_key().as_ref()
+            != Some(&crate::ssh::expand_path(&key_path))
+        {
+            Some("the github.com SSH key")
+        } else {
+            None
+        };
+        if let Some(what) = problem {
+            let _ = app.emit("switch-unverified", format!("{what} did not take effect."));
+        }
+    });
 }
 
 #[tauri::command]
@@ -376,15 +402,6 @@ pub fn list_for_tray(app: &AppHandle) -> (Vec<(String, String)>, Option<String>)
         }
     }
     (items, active)
-}
-
-#[tauri::command]
-pub fn set_active_profile(app: AppHandle, id: Option<String>) -> Result<(), String> {
-    let conn = open(&app)?;
-    match id {
-        Some(id) => set_setting(&conn, ACTIVE_KEY, &id),
-        None => clear_setting(&conn, ACTIVE_KEY),
-    }
 }
 
 #[derive(Serialize)]
