@@ -1,7 +1,7 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Plus, ArrowsClockwise, Gear, Minus, X } from "@phosphor-icons/react";
 
-import logoDark from "../assets/logo_dark.svg";
+import logoLight from "../assets/logo_light.svg";
 
 type NavbarProps = {
   onAdd: () => void;
@@ -19,7 +19,7 @@ export default function Navbar({ onAdd, onRefresh, onSettings }: NavbarProps) {
     >
       {/* Left: app identity */}
       <div data-tauri-drag-region className="flex items-center gap-2">
-        <img src={logoDark} alt="GitSwitch" className="h-4.5 w-auto drop-shadow-sm pointer-events-none" />
+        <img src={logoLight} alt="GitSwitch" className="h-4.5 w-auto drop-shadow-sm pointer-events-none" />
         <span className="text-sm font-medium text-neutral-200 tracking-wide">
           GitSwitch
         </span>
