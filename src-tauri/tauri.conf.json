@@ -32,7 +32,7 @@
       "endpoints": [
         "https://github.com/iput-object/GitSwitch/releases/latest/download/updater.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFGQ0M1RDAzQzZEQUI5RjEKUldUeHVkckdBMTNNcjFEdkdVSlo1MGJSK011dk13dlJ1UFJaOXJtdU1HNk02dW5pa2poaVYvZTgK%"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFGQ0M1RDAzQzZEQUI5RjEKUldUeHVkckdBMTNNcjFEdkdVSlo1MGJSK011dk13dlJ1UFJaOXJtdU1HNk02dW5pa2poaVYvZTgK"
     }
   },
   "bundle": {
