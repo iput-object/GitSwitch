@@ -12,6 +12,10 @@ jobs:
       contents: write
     strategy:
       fail-fast: false
+      # Serialized: every platform job uploads its own latest.json to the same
+      # release; parallel uploads race and 404. Releases are infrequent, so the
+      # slower sequential build is worth the reliable updater manifest.
+      max-parallel: 1
       matrix:
         include:
           - platform: "macos-latest"
