@@ -1,43 +1,23 @@
-import {
-  motion,
-  useSpring,
-  useTransform,
-  type MotionValue,
-} from "motion/react";
-
-type BackgroundProps = {
-  /** Normalized pointer position (-0.5 .. 0.5) across the window. */
-  px: MotionValue<number>;
-  py: MotionValue<number>;
-};
-
 /**
  * The app-wide ambient background. Lives at the shell level so the entire
- * window, navbar included, shares one surface. Drifts subtly with the pointer.
+ * window, navbar included, shares one surface.
+ *
+ * Static radial-gradient glows instead of animated blur() blobs: paints once,
+ * never repaints, and costs nothing to composite on macOS/Windows webviews
+ * where filter blur is expensive. ponytail: traded pointer drift for perf.
  */
-export default function Background({ px, py }: BackgroundProps) {
-  const sx = useSpring(px, { stiffness: 120, damping: 20, mass: 0.4 });
-  const sy = useSpring(py, { stiffness: 120, damping: 20, mass: 0.4 });
-
-  const aX = useTransform(sx, (v) => v * 46);
-  const aY = useTransform(sy, (v) => v * 46);
-  const bX = useTransform(sx, (v) => v * -34);
-  const bY = useTransform(sy, (v) => v * -34);
-
+export default function Background() {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      <motion.div
-        style={{ x: aX, y: aY }}
-        className="absolute -top-28 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary-500/15 blur-[110px]"
-      />
-      <motion.div
-        style={{ x: bX, y: bY }}
-        className="absolute -bottom-28 -right-16 h-64 w-64 rounded-full bg-primary-400/10 blur-[100px]"
-      />
-      <motion.div
-        style={{ x: bX, y: aY }}
-        className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-primary-500/10 blur-[100px]"
-      />
+    <div
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+      style={{
+        backgroundImage: [
+          "radial-gradient(420px 320px at 50% -8%, rgba(6,182,212,0.14), transparent 70%)",
+          "radial-gradient(360px 300px at 108% 108%, rgba(34,211,238,0.10), transparent 70%)",
+          "radial-gradient(320px 280px at -8% 108%, rgba(6,182,212,0.10), transparent 70%)",
+        ].join(","),
+      }}
+    >
       <div className="absolute inset-0 opacity-[0.035] bg-[linear-gradient(rgba(255,255,255,0.6)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.6)_1px,transparent_1px)] bg-size-[26px_26px] mask-[radial-gradient(circle_at_50%_45%,black,transparent_70%)]" />
     </div>
   );

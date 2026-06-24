@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useMotionValue, useReducedMotion } from "motion/react";
 import Background from "./components/Background";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
@@ -171,20 +170,6 @@ function App() {
     }
   }
 
-  const reduce = useReducedMotion();
-  const px = useMotionValue(0);
-  const py = useMotionValue(0);
-  function handlePointer(e: React.PointerEvent<HTMLDivElement>) {
-    if (reduce) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    px.set((e.clientX - r.left) / r.width - 0.5);
-    py.set((e.clientY - r.top) / r.height - 0.5);
-  }
-  function resetPointer() {
-    px.set(0);
-    py.set(0);
-  }
-
   function completeWelcome() {
     localStorage.setItem(ONBOARDED_KEY, "1");
     openAdd();
@@ -211,12 +196,8 @@ function App() {
   const showLayout = screen !== "welcome" && screen !== "add-profile";
 
   return (
-    <div
-      onPointerMove={handlePointer}
-      onPointerLeave={resetPointer}
-      className="relative h-screen w-screen bg-neutral-950 rounded-2xl overflow-hidden flex flex-col font-sans"
-    >
-      <Background px={px} py={py} />
+    <div className="relative h-screen w-screen bg-neutral-950 rounded-2xl overflow-hidden flex flex-col font-sans">
+      <Background />
 
       {/* Navbar is always visible unless on welcome/add-profile (though we could show it there too, let's keep it clean) */}
       {showLayout && (
