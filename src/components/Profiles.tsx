@@ -17,6 +17,8 @@ import ActiveProfile from "./ActiveProfile";
 
 type ProfilesProps = {
   profiles: StoredProfile[];
+  /** Ids of profiles whose key is missing or no longer accepted by GitHub. */
+  broken: Set<string>;
   activeId: string | null;
   untracked: Untracked | null;
   onAdd: () => void;
@@ -40,6 +42,7 @@ const item: Variants = {
 
 export default function Profiles({
   profiles,
+  broken,
   activeId,
   untracked,
   onAdd,
@@ -233,6 +236,14 @@ export default function Profiles({
                       <span className="text-xs text-neutral-500">
                         @{p.githubLogin}
                       </span>
+                      {broken.has(p.id) && (
+                        <span
+                          title="This account's SSH key is missing or no longer accepted by GitHub. Re-add or regenerate the key."
+                          className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-medium text-rose-300"
+                        >
+                          won't work
+                        </span>
+                      )}
                     </div>
                     <div className="truncate text-[11px] text-neutral-500">
                       {p.gitEmail}
@@ -260,15 +271,27 @@ export default function Profiles({
                     </div>
                   ) : (
                     <>
-                      {/* Switch button */}
-                      <button
-                        onClick={() => handleSelect(p.id)}
-                        className="rounded-lg border border-primary-400/20 bg-primary-400/6 px-4 py-1.5
-                                 text-xs font-medium text-primary-300 transition-colors
-                                 hover:bg-primary-400/15"
-                      >
-                        Switch
-                      </button>
+                      {/* Switching to a broken profile won't work — offer to
+                          delete it instead, in the Switch button's place. */}
+                      {broken.has(p.id) ? (
+                        <button
+                          onClick={() => setConfirmDeleteId(p.id)}
+                          className="rounded-lg border border-rose-400/20 bg-rose-500/8 px-4 py-1.5
+                                   text-xs font-medium text-rose-300 transition-colors
+                                   hover:bg-rose-500/15"
+                        >
+                          Delete
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleSelect(p.id)}
+                          className="rounded-lg border border-primary-400/20 bg-primary-400/6 px-4 py-1.5
+                                   text-xs font-medium text-primary-300 transition-colors
+                                   hover:bg-primary-400/15"
+                        >
+                          Switch
+                        </button>
+                      )}
 
                       {/* Kebab menu */}
                       <div className="relative">

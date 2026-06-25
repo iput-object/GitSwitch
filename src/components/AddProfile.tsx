@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { motion, useReducedMotion, type Variants } from "motion/react";
@@ -23,6 +23,8 @@ export type StoredProfile = {
   avatar: string | null;
   keyPath: string;
   publicKey: string;
+  /** True when the key file this profile points at is gone from disk. */
+  keyMissing: boolean;
   publicRepos: number | null;
   followers: number | null;
   commits: number | null;
@@ -88,6 +90,17 @@ export default function AddProfile({
     if (t.includes("PRIVATE KEY")) return "key";
     return "path";
   }, [input]);
+
+  // Opened with a prefilled key (importing an in-use identity)? Fetch the
+  // GitHub account straight away so the user lands on a ready-to-save card.
+  const didAutoSync = useRef(false);
+  useEffect(() => {
+    if (initialInput.trim() && !didAutoSync.current) {
+      didAutoSync.current = true;
+      handleSync();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialInput]);
 
   async function handleCreate() {
     setError(null);

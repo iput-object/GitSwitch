@@ -3,8 +3,8 @@
 
 use crate::paths;
 use serde::Serialize;
+use crate::paths::command;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 const MANAGED_BEGIN: &str = "# >>> GitSwitch managed block";
 const MANAGED_END: &str = "# <<< GitSwitch managed block";
@@ -126,7 +126,7 @@ pub fn read_public_key(private_path: &Path) -> String {
     if let Ok(s) = std::fs::read_to_string(&pub_path) {
         return s.trim().to_string();
     }
-    if let Ok(out) = Command::new("ssh-keygen")
+    if let Ok(out) = command("ssh-keygen")
         .arg("-y")
         .arg("-f")
         .arg(private_path)
@@ -143,7 +143,7 @@ pub fn read_public_key(private_path: &Path) -> String {
 pub fn generate_ssh_key() -> Result<GeneratedKey, String> {
     // Generated into staging, not ~/.ssh. It only moves home on save.
     let key_path = staged_key_path()?;
-    let output = Command::new("ssh-keygen")
+    let output = command("ssh-keygen")
         .args(["-t", "ed25519", "-N", "", "-C", "gitswitch", "-f"])
         .arg(&key_path)
         .output()
@@ -235,7 +235,7 @@ pub fn commit_key(key_path: String, login: String) -> Result<String, String> {
 /// Ask GitHub who this key belongs to. `ssh -T git@github.com` exits non-zero
 /// even on success, so we parse the `Hi <login>!` banner from its output.
 pub fn ssh_identify(key_path: &Path) -> Result<String, String> {
-    let output = Command::new("ssh")
+    let output = command("ssh")
         // Ignore the user's ~/.ssh/config and ssh-agent so we test ONLY the key
         // passed here. Otherwise an existing github.com config entry would
         // authenticate on its own and report the wrong (ambient) account.
@@ -279,6 +279,26 @@ pub fn ssh_identify(key_path: &Path) -> Result<String, String> {
         "Could not verify the key with GitHub.\n{}",
         text.trim()
     ))
+}
+
+/// Health-check a saved profile's key. Network call (a few seconds) — call it
+/// off the startup load path, never inline. Returns:
+///   "ok"      — key file is present and authenticates with GitHub as `login`.
+///   "broken"  — file is gone, GitHub rejected the key, or it now belongs to a
+///               different account. The profile will not work as-is.
+///   "unknown" — could not reach GitHub. Don't flag the profile on this alone.
+#[tauri::command]
+pub fn check_profile(key_path: String, login: String) -> &'static str {
+    let path = expand_path(&key_path);
+    if !path.exists() {
+        return "broken";
+    }
+    match ssh_identify(&path) {
+        Ok(who) if who.eq_ignore_ascii_case(login.trim()) => "ok",
+        Ok(_) => "broken",                                          // wrong account
+        Err(e) if e.contains("did not recognize this key") => "broken", // removed from GitHub
+        Err(_) => "unknown",                                       // network/other
+    }
 }
 
 /// Remove the GitSwitch-managed block (between markers), leaving everything

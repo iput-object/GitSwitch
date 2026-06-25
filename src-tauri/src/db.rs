@@ -21,6 +21,8 @@ pub struct StoredProfile {
     avatar: Option<String>,
     key_path: String,
     public_key: String,
+    /// True when the private key file this profile points at is gone from disk.
+    key_missing: bool,
     /// Public GitHub stats for the dashboard (best-effort, may be null).
     public_repos: Option<i64>,
     followers: Option<i64>,
@@ -90,6 +92,8 @@ fn open(app: &AppHandle) -> Result<Connection, String> {
 fn row_to_profile(row: &rusqlite::Row) -> rusqlite::Result<StoredProfile> {
     let blob: Option<Vec<u8>> = row.get(5)?;
     let mime: Option<String> = row.get(6)?;
+    let key_path: String = row.get(7)?;
+    let key_missing = !crate::ssh::expand_path(&key_path).exists();
     Ok(StoredProfile {
         id: row.get(0)?,
         display_name: row.get(1)?,
@@ -97,8 +101,9 @@ fn row_to_profile(row: &rusqlite::Row) -> rusqlite::Result<StoredProfile> {
         git_email: row.get(3)?,
         github_login: row.get(4)?,
         avatar: data_uri(blob, mime),
-        key_path: row.get(7)?,
+        key_path,
         public_key: row.get(8)?,
+        key_missing,
         public_repos: row.get(9)?,
         followers: row.get(10)?,
         commits: row.get(11)?,
@@ -237,6 +242,7 @@ pub fn add_profile(app: AppHandle, profile: NewProfile) -> Result<StoredProfile,
         git_email: profile.git_email,
         github_login: profile.github_login,
         avatar: data_uri(blob, mime),
+        key_missing: !crate::ssh::expand_path(&profile.key_path).exists(),
         key_path: profile.key_path,
         public_key: profile.public_key,
         public_repos: stats.public_repos,

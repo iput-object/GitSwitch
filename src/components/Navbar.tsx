@@ -6,10 +6,11 @@ import logo from "../assets/logo.svg";
 type NavbarProps = {
   onAdd: () => void;
   onRefresh: () => void;
+  refreshing?: boolean;
   onSettings: () => void;
 };
 
-export default function Navbar({ onAdd, onRefresh, onSettings }: NavbarProps) {
+export default function Navbar({ onAdd, onRefresh, refreshing, onSettings }: NavbarProps) {
   const appWindow = getCurrentWindow();
 
   return (
@@ -38,12 +39,13 @@ export default function Navbar({ onAdd, onRefresh, onSettings }: NavbarProps) {
 
         <button
           onClick={onRefresh}
+          disabled={refreshing}
           aria-label="Refresh profiles"
           className="w-7 h-7 flex items-center justify-center rounded-md
                      text-neutral-400 hover:bg-white/10 hover:text-neutral-100
-                     transition-colors"
+                     transition-colors disabled:hover:bg-transparent"
         >
-          <ArrowsClockwise size={14} weight="bold" />
+          <ArrowsClockwise size={14} weight="bold" className={refreshing ? "animate-spin" : ""} />
         </button>
 
         <button

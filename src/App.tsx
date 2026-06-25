@@ -1,5 +1,5 @@
 import "./styles/global.css";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -39,19 +39,51 @@ function App() {
       : "welcome"
   );
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  // Ids of profiles that won't work: key file gone, or key removed from GitHub.
+  const [broken, setBroken] = useState<Set<string>>(new Set());
+  // Spins the reload icon while a refresh-all is running; ref guards re-entry.
+  const [refreshingAll, setRefreshingAll] = useState(false);
+  const refreshingAllRef = useRef(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [untracked, setUntracked] = useState<Untracked | null>(null);
   const [pendingInput, setPendingInput] = useState("");
 
   useEffect(() => {
-    const profilesP = invoke<Profile[]>("list_profiles")
+    // Local DB read only — paints the list immediately. Stats/avatars are
+    // cached here, so we do NOT re-fetch GitHub on open (that was the load).
+    // Use the refresh button to pull fresh stats.
+    invoke<Profile[]>("list_profiles")
       .then((list) => {
         setProfiles(list);
-        return list;
+        // Health-check the profiles one at a time, after the list has painted.
+        // Each GitHub probe spawns an `ssh` subprocess; firing them all at once
+        // spikes CPU and lags the freshly-opened window, so we serialize and
+        // wait for idle first. The await loop yields between each, keeping the
+        // UI responsive.
+        const flag = (id: string) => setBroken((s) => new Set(s).add(id));
+        const run = async () => {
+          for (const p of list) {
+            if (p.keyMissing) {
+              flag(p.id);
+              continue;
+            }
+            try {
+              const status = await invoke<string>("check_profile", {
+                keyPath: p.keyPath,
+                login: p.githubLogin,
+              });
+              if (status === "broken") flag(p.id);
+            } catch {
+              /* network/other — leave the profile unflagged */
+            }
+          }
+        };
+        const idle = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 200));
+        idle(() => void run());
       })
-      .catch(() => [] as Profile[]);
+      .catch(() => {});
 
-    const activeP = invoke<ActiveState>("reconcile_active")
+    invoke<ActiveState>("reconcile_active")
       .then((s) => {
         if (s.matchedId) {
           setActiveId(s.matchedId);
@@ -72,15 +104,6 @@ function App() {
           .catch(() => null);
       })
       .catch(() => null);
-
-    Promise.all([profilesP, activeP]).then(([list, id]) => {
-      if (!id || list.length === 0) return;
-      invoke<Profile>("refresh_profile", { id })
-        .then((updated) =>
-          setProfiles((prev) => prev.map((p) => (p.id === id ? updated : p)))
-        )
-        .catch(() => {});
-    });
   }, []);
 
   useEffect(() => {
@@ -136,10 +159,30 @@ function App() {
   }
 
   async function handleRefreshAll() {
-    for (const p of profiles) {
-      await handleRefresh(p.id).catch(() => {});
+    if (refreshingAllRef.current) return; // ignore re-trigger while in flight
+    refreshingAllRef.current = true;
+    setRefreshingAll(true);
+    try {
+      for (const p of profiles) {
+        await handleRefresh(p.id).catch(() => {});
+      }
+    } finally {
+      refreshingAllRef.current = false;
+      setRefreshingAll(false);
     }
   }
+
+  // Ctrl/Cmd+R refreshes all profiles (same as the reload icon).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "r") {
+        e.preventDefault();
+        handleRefreshAll();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [profiles]);
 
   async function handleUpdateProfile(id: string, displayName: string, gitEmail: string) {
     try {
@@ -172,7 +215,9 @@ function App() {
 
   function completeWelcome() {
     localStorage.setItem(ONBOARDED_KEY, "1");
-    openAdd();
+    // First run: if config already has a GitHub identity, hand the onboarding
+    // Add Profile step its key so it lands pre-synced and ready to save.
+    openAdd(untracked?.keyPath ?? "");
   }
 
   function handleSaveProfile(profile: Profile) {
@@ -201,9 +246,10 @@ function App() {
 
       {/* Navbar is always visible unless on welcome/add-profile (though we could show it there too, let's keep it clean) */}
       {showLayout && (
-        <Navbar 
+        <Navbar
           onAdd={() => openAdd()}
           onRefresh={handleRefreshAll}
+          refreshing={refreshingAll}
           onSettings={() => setScreen("settings")}
         />
       )}
@@ -216,6 +262,7 @@ function App() {
             onOpenGitHub={handleOpenGitHub}
             onOpenSSH={handleOpenSSH}
             onRefreshAll={handleRefreshAll}
+            refreshingAll={refreshingAll}
           />
         )}
 
@@ -235,6 +282,7 @@ function App() {
           {screen === "profiles" && (
             <Profiles
               profiles={profiles}
+              broken={broken}
               activeId={activeId}
               untracked={untracked}
               onAdd={() => openAdd()}

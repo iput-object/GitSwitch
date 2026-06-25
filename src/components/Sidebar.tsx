@@ -16,6 +16,7 @@ type SidebarProps = {
   onOpenGitHub: () => void;
   onOpenSSH: () => void;
   onRefreshAll: () => void;
+  refreshingAll?: boolean;
 };
 
 const navItems = [
@@ -30,6 +31,7 @@ export default function Sidebar({
   onOpenGitHub,
   onOpenSSH,
   onRefreshAll,
+  refreshingAll,
 }: SidebarProps) {
   const [appVersion, setAppVersion] = React.useState("0.1.0");
   const [updateAvailable, setUpdateAvailable] = React.useState<any>(null);
@@ -113,9 +115,14 @@ export default function Sidebar({
 
           <button
             onClick={onRefreshAll}
+            disabled={refreshingAll}
             className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-neutral-400 transition-colors cursor-pointer hover:text-neutral-200 hover:bg-white/3"
           >
-            <ArrowsClockwise size={18} weight="regular" className="shrink-0" />
+            <ArrowsClockwise
+              size={18}
+              weight="regular"
+              className={`shrink-0 ${refreshingAll ? "animate-spin" : ""}`}
+            />
             <span className="truncate">Refresh Profiles</span>
           </button>
         </div>

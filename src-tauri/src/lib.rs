@@ -25,7 +25,15 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
-            tray::create(app.handle())?;
+            // Build the tray on the event loop, not inline: it reads the DB to
+            // populate its menu, and doing that here blocks the main thread
+            // before the window paints. Queueing it lets the window show first.
+            let handle = app.handle().clone();
+            app.handle().run_on_main_thread(move || {
+                if let Err(e) = tray::create(&handle) {
+                    eprintln!("tray init failed: {e}");
+                }
+            })?;
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -43,6 +51,7 @@ pub fn run() {
             ssh::generate_ssh_key,
             ssh::commit_key,
             ssh::open_ssh_folder,
+            ssh::check_profile,
             github::sync_github,
             db::add_profile,
             db::list_profiles,
