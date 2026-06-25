@@ -23,6 +23,18 @@ export type Untracked = {
 };
 
 const ONBOARDED_KEY = "gitswitch.onboarded";
+const BROKEN_KEY = "gitswitch.broken";
+
+// Last-known broken profile ids, so badges paint immediately on reopen instead
+// of waiting for a fresh GitHub round trip. Reconciled in the background below.
+const loadBrokenCache = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem(BROKEN_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+};
 
 function App() {
   const [screen, setScreen] = useState<Screen>(() =>
@@ -33,7 +45,7 @@ function App() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true); // first DB read in flight
   // Ids of profiles that won't work: key file gone, or key removed from GitHub.
-  const [broken, setBroken] = useState<Set<string>>(new Set());
+  const [broken, setBroken] = useState<Set<string>>(loadBrokenCache);
   // Spins the reload icon while a refresh-all is running; ref guards re-entry.
   const [refreshingAll, setRefreshingAll] = useState(false);
   const refreshingAllRef = useRef(false);
@@ -49,25 +61,36 @@ function App() {
       .then((list) => {
         setProfiles(list);
         setLoading(false);
-        // Health-check the profiles one at a time, after the list has painted.
-        // Each GitHub probe spawns an `ssh` subprocess; firing them all at once
-        // spikes CPU and lags the freshly-opened window, so we serialize and
-        // wait for idle first. The await loop yields between each, keeping the
-        // UI responsive.
-        const flag = (id: string) => setBroken((s) => new Set(s).add(id));
-        const run = async () => {
-          for (const p of list) {
-            if (p.keyMissing) {
-              flag(p.id);
-              continue;
-            }
-            try {
-              const status = await api.checkProfile(p.keyPath, p.githubLogin);
-              if (status === "broken") flag(p.id);
-            } catch {
-              /* network/other — leave the profile unflagged */
-            }
+        // Badges already painted from the cached broken set; this just reconciles
+        // them against GitHub in the background. Each probe is an `ssh` round trip
+        // (network-bound, not CPU), so we run a few at a time after idle — much
+        // faster to settle than strictly serial, without spiking the open window.
+        const result = loadBrokenCache();
+        const mark = (id: string, isBroken: boolean) => {
+          if (isBroken) result.add(id);
+          else result.delete(id);
+          setBroken(new Set(result));
+        };
+        const check = async (p: Profile) => {
+          if (p.keyMissing) return mark(p.id, true);
+          try {
+            const status = await api.checkProfile(p.keyPath, p.githubLogin);
+            if (status === "ok") mark(p.id, false);
+            else if (status === "broken") mark(p.id, true);
+            // "unknown" (network/other): keep the cached value
+          } catch {
+            /* leave the cached value in place */
           }
+        };
+        const run = async () => {
+          const CONCURRENCY = 4; // ponytail: bounded fan-out; raise if probes still drag
+          for (let i = 0; i < list.length; i += CONCURRENCY) {
+            await Promise.all(list.slice(i, i + CONCURRENCY).map(check));
+          }
+          // Forget cached ids for profiles that no longer exist, then persist.
+          const live = new Set(list.map((p) => p.id));
+          for (const id of result) if (!live.has(id)) result.delete(id);
+          localStorage.setItem(BROKEN_KEY, JSON.stringify([...result]));
         };
         const idle = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 200));
         idle(() => void run());
