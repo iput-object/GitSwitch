@@ -1,13 +1,13 @@
 import "./styles/global.css";
 import { useEffect, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { api, type StoredProfile } from "./services/tauri";
 import Background from "./components/Background";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import Welcome from "./components/Welcome";
-import AddProfile, { type StoredProfile } from "./components/AddProfile";
+import AddProfile from "./components/AddProfile";
 import Profiles from "./components/Profiles";
 import SSHKeys from "./components/SSHKeys";
 import Settings from "./components/Settings";
@@ -15,14 +15,6 @@ import Settings from "./components/Settings";
 type Screen = "welcome" | "add-profile" | "profiles" | "ssh-keys" | "settings";
 
 type Profile = StoredProfile;
-
-type ActiveState = {
-  matchedId: string | null;
-  gitName: string | null;
-  gitEmail: string | null;
-  keyPath: string | null;
-  unmanagedLogin: string | null;
-};
 
 export type Untracked = {
   login: string | null;
@@ -39,6 +31,7 @@ function App() {
       : "welcome"
   );
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true); // first DB read in flight
   // Ids of profiles that won't work: key file gone, or key removed from GitHub.
   const [broken, setBroken] = useState<Set<string>>(new Set());
   // Spins the reload icon while a refresh-all is running; ref guards re-entry.
@@ -52,9 +45,10 @@ function App() {
     // Local DB read only — paints the list immediately. Stats/avatars are
     // cached here, so we do NOT re-fetch GitHub on open (that was the load).
     // Use the refresh button to pull fresh stats.
-    invoke<Profile[]>("list_profiles")
+    api.listProfiles()
       .then((list) => {
         setProfiles(list);
+        setLoading(false);
         // Health-check the profiles one at a time, after the list has painted.
         // Each GitHub probe spawns an `ssh` subprocess; firing them all at once
         // spikes CPU and lags the freshly-opened window, so we serialize and
@@ -68,10 +62,7 @@ function App() {
               continue;
             }
             try {
-              const status = await invoke<string>("check_profile", {
-                keyPath: p.keyPath,
-                login: p.githubLogin,
-              });
+              const status = await api.checkProfile(p.keyPath, p.githubLogin);
               if (status === "broken") flag(p.id);
             } catch {
               /* network/other — leave the profile unflagged */
@@ -81,9 +72,9 @@ function App() {
         const idle = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 200));
         idle(() => void run());
       })
-      .catch(() => {});
+      .catch(() => setLoading(false));
 
-    invoke<ActiveState>("reconcile_active")
+    api.reconcileActive()
       .then((s) => {
         if (s.matchedId) {
           setActiveId(s.matchedId);
@@ -96,7 +87,7 @@ function App() {
             keyPath: s.keyPath,
           });
         }
-        return invoke<string | null>("get_active_profile")
+        return api.getActiveProfile()
           .then((id) => {
             setActiveId(id);
             return id;
@@ -138,9 +129,9 @@ function App() {
     setActiveId(id);
     setUntracked(null);
 
-    invoke("activate_profile", { id }).catch(() => {});
+    api.activateProfile(id).catch(() => {});
 
-    invoke<Profile>("refresh_profile", { id })
+    api.refreshProfile(id)
       .then((updated) =>
         setProfiles((prev) => prev.map((p) => (p.id === id ? updated : p)))
       )
@@ -150,11 +141,11 @@ function App() {
   function handleDelete(id: string) {
     if (id === activeId) return;
     setProfiles((prev) => prev.filter((p) => p.id !== id));
-    invoke("delete_profile", { id }).catch(() => {});
+    api.deleteProfile(id).catch(() => {});
   }
 
   async function handleRefresh(id: string) {
-    const updated = await invoke<Profile>("refresh_profile", { id });
+    const updated = await api.refreshProfile(id);
     setProfiles((prev) => prev.map((p) => (p.id === id ? updated : p)));
   }
 
@@ -186,7 +177,7 @@ function App() {
 
   async function handleUpdateProfile(id: string, displayName: string, gitEmail: string) {
     try {
-      await invoke("update_profile_details", { id, displayName, gitEmail });
+      await api.updateProfileDetails(id, displayName, gitEmail);
       setProfiles((prev) =>
         prev.map((p) => (p.id === id ? { ...p, displayName, gitEmail } : p))
       );
@@ -206,7 +197,7 @@ function App() {
 
   async function handleOpenSSH() {
     try {
-      await invoke("open_ssh_folder");
+      await api.openSshFolder();
     } catch (err) {
       alert(String(err));
       console.error(err);
@@ -225,7 +216,7 @@ function App() {
     setUntracked(null);
     setActiveId((current) => {
       if (current) return current;
-      invoke("activate_profile", { id: profile.id }).catch(() => {});
+      api.activateProfile(profile.id).catch(() => {});
       return profile.id;
     });
     setScreen("profiles");
@@ -283,6 +274,7 @@ function App() {
             <Profiles
               profiles={profiles}
               broken={broken}
+              loading={loading}
               activeId={activeId}
               untracked={untracked}
               onAdd={() => openAdd()}

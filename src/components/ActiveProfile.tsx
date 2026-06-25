@@ -1,6 +1,6 @@
 import { motion, useReducedMotion, type Variants } from "motion/react";
 import { Envelope, ArrowSquareOut } from "@phosphor-icons/react";
-import type { StoredProfile } from "./AddProfile";
+import type { StoredProfile } from "../services/tauri";
 
 type ActiveProfileProps = {
   profile: StoredProfile | undefined;

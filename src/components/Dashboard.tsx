@@ -1,5 +1,5 @@
 import { motion, useReducedMotion, type Variants } from "motion/react";
-import type { StoredProfile } from "./AddProfile";
+import type { StoredProfile } from "../services/tauri";
 
 type DashboardProps = {
   profiles: StoredProfile[];

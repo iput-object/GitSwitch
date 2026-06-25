@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Key, Copy, Check } from "@phosphor-icons/react";
 import { motion, useReducedMotion, type Variants } from "motion/react";
-import type { StoredProfile } from "./AddProfile";
+import type { StoredProfile } from "../services/tauri";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const container: Variants = {

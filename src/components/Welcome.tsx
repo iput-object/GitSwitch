@@ -1,16 +1,11 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import {
   motion,
   useReducedMotion,
   type Variants,
 } from "motion/react";
 import { ArrowRight } from "@phosphor-icons/react";
-
-type HostInfo = {
-  username: string;
-  avatar: string | null;
-};
+import { api, type HostInfo } from "../services/tauri";
 
 type WelcomeProps = {
   onContinue: () => void;
@@ -48,7 +43,7 @@ export default function Welcome({ onContinue }: WelcomeProps) {
   });
 
   useEffect(() => {
-    invoke<HostInfo>("get_host_info")
+    api.getHostInfo()
       .then(setHost)
       .catch(() => {
         /* keep the friendly default */

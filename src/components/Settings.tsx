@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
-import { invoke } from "@tauri-apps/api/core";
 import { TrayIcon } from "@tauri-apps/api/tray";
+import { api } from "../services/tauri";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -94,7 +94,7 @@ export default function Settings({ onClearAllProfiles }: SettingsProps) {
 
   const handleDeleteAllProfiles = async () => {
     try {
-      await invoke("delete_all_profiles");
+      await api.deleteAllProfiles();
       onClearAllProfiles();
     } catch (err) {
       console.error(err);

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 import {
@@ -12,35 +11,12 @@ import {
   Key,
   WarningCircle,
 } from "@phosphor-icons/react";
-
-export type StoredProfile = {
-  id: string;
-  displayName: string;
-  gitName: string;
-  gitEmail: string;
-  githubLogin: string;
-  /** Locally cached avatar as a data: URI. */
-  avatar: string | null;
-  keyPath: string;
-  publicKey: string;
-  /** True when the key file this profile points at is gone from disk. */
-  keyMissing: boolean;
-  publicRepos: number | null;
-  followers: number | null;
-  commits: number | null;
-};
-
-type GeneratedKey = { keyPath: string; publicKey: string };
-
-type GithubAccount = {
-  login: string;
-  name: string | null;
-  avatarUrl: string | null;
-  suggestedEmail: string;
-  keyPath: string;
-  publicKey: string;
-  managed: boolean;
-};
+import {
+  api,
+  type StoredProfile,
+  type GeneratedKey,
+  type GithubAccount,
+} from "../services/tauri";
 
 type AddProfileProps = {
   /** Prefill the input (e.g. importing an untracked key path). */
@@ -106,7 +82,7 @@ export default function AddProfile({
     setError(null);
     setGenerating(true);
     try {
-      const k = await invoke<GeneratedKey>("generate_ssh_key");
+      const k = await api.generateSshKey();
       setGenerated(k);
       setInput(k.keyPath);
     } catch (e) {
@@ -124,7 +100,7 @@ export default function AddProfile({
     setError(null);
     setSyncing(true);
     try {
-      const acc = await invoke<GithubAccount>("sync_github", { input });
+      const acc = await api.syncGithub(input);
       if (existingLogins.includes(acc.login)) {
         setError(`@${acc.login} is already added.`);
         return; // stay on the input stage; no duplicate
@@ -157,23 +133,18 @@ export default function AddProfile({
     try {
       // A staged key only moves into ~/.ssh now, at save time.
       const keyPath = account.managed
-        ? await invoke<string>("commit_key", {
-            keyPath: account.keyPath,
-            login: account.login,
-          })
+        ? await api.commitKey(account.keyPath, account.login)
         : account.keyPath;
       const name = account.name || account.login;
       // Persist to SQLite (this also downloads + caches the avatar).
-      const stored = await invoke<StoredProfile>("add_profile", {
-        profile: {
-          displayName: name,
-          gitName: name,
-          gitEmail: email.trim() || account.suggestedEmail,
-          githubLogin: account.login,
-          avatarUrl: account.avatarUrl,
-          keyPath,
-          publicKey: account.publicKey,
-        },
+      const stored = await api.addProfile({
+        displayName: name,
+        gitName: name,
+        gitEmail: email.trim() || account.suggestedEmail,
+        githubLogin: account.login,
+        avatarUrl: account.avatarUrl,
+        keyPath,
+        publicKey: account.publicKey,
       });
       onSave(stored);
     } catch (e) {

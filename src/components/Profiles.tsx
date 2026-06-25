@@ -11,7 +11,7 @@ import {
   UserCircle,
   PencilSimple,
 } from "@phosphor-icons/react";
-import type { StoredProfile } from "./AddProfile";
+import type { StoredProfile } from "../services/tauri";
 import type { Untracked } from "../App";
 import ActiveProfile from "./ActiveProfile";
 
@@ -19,6 +19,8 @@ type ProfilesProps = {
   profiles: StoredProfile[];
   /** Ids of profiles whose key is missing or no longer accepted by GitHub. */
   broken: Set<string>;
+  /** First DB read still in flight — suppresses the empty-state flash. */
+  loading: boolean;
   activeId: string | null;
   untracked: Untracked | null;
   onAdd: () => void;
@@ -43,6 +45,7 @@ const item: Variants = {
 export default function Profiles({
   profiles,
   broken,
+  loading,
   activeId,
   untracked,
   onAdd,
@@ -167,7 +170,10 @@ export default function Profiles({
         )}
 
         {/* ── Profile list / empty state ────────────────────────── */}
+        {/* Stay blank until the first DB read finishes, so the "No accounts"
+            state doesn't flash before profiles arrive. */}
         {profiles.length === 0 ? (
+          loading ? null : (
           <div className="flex flex-1 flex-col items-center justify-center text-center">
             <UserCircle
               size={40}
@@ -184,6 +190,7 @@ export default function Profiles({
               <Plus size={15} weight="bold" /> Add an account
             </button>
           </div>
+          )
         ) : otherProfiles.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center text-center pb-8">
             <p className="text-xs text-neutral-500 max-w-48 mx-auto">
