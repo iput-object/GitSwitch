@@ -2,8 +2,10 @@ import "./styles/global.css";
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { AnimatePresence } from "motion/react";
 import { api, type StoredProfile } from "./services/tauri";
 import Background from "./components/Background";
+import Splash from "./components/Splash";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import Welcome from "./components/Welcome";
@@ -44,80 +46,64 @@ function App() {
   );
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true); // first DB read in flight
-  // Ids of profiles that won't work: key file gone, or key removed from GitHub.
-  const [broken, setBroken] = useState<Set<string>>(loadBrokenCache);
+  // Ids of profiles that won't work, painted from the last-known cached set.
+  // Reconciled on demand via refresh, not on open.
+  const [broken] = useState<Set<string>>(loadBrokenCache);
   // Spins the reload icon while a refresh-all is running; ref guards re-entry.
   const [refreshingAll, setRefreshingAll] = useState(false);
   const refreshingAllRef = useRef(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [untracked, setUntracked] = useState<Untracked | null>(null);
   const [pendingInput, setPendingInput] = useState("");
+  // Splash only appears if the first load is slow enough to notice, so a fast
+  // launch never flashes it.
+  const [showSplash, setShowSplash] = useState(false);
+  // The onboarding identity probe, awaited by the Welcome Continue button so it
+  // can pre-fill the detected key. Resolves to a key path (or "").
+  const reconcileRef = useRef<Promise<string>>(Promise.resolve(""));
+
+  // Reveal the splash only when the initial load outlasts this grace period.
+  useEffect(() => {
+    if (!loading) {
+      setShowSplash(false);
+      return;
+    }
+    const t = setTimeout(() => setShowSplash(true), 200);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   useEffect(() => {
-    // Local DB read only — paints the list immediately. Stats/avatars are
-    // cached here, so we do NOT re-fetch GitHub on open (that was the load).
-    // Use the refresh button to pull fresh stats.
-    api.listProfiles()
-      .then((list) => {
-        setProfiles(list);
-        setLoading(false);
-        // Badges already painted from the cached broken set; this just reconciles
-        // them against GitHub in the background. Each probe is an `ssh` round trip
-        // (network-bound, not CPU), so we run a few at a time after idle — much
-        // faster to settle than strictly serial, without spiking the open window.
-        const result = loadBrokenCache();
-        const mark = (id: string, isBroken: boolean) => {
-          if (isBroken) result.add(id);
-          else result.delete(id);
-          setBroken(new Set(result));
-        };
-        const check = async (p: Profile) => {
-          if (p.keyMissing) return mark(p.id, true);
-          try {
-            const status = await api.checkProfile(p.keyPath, p.githubLogin);
-            if (status === "ok") mark(p.id, false);
-            else if (status === "broken") mark(p.id, true);
-            // "unknown" (network/other): keep the cached value
-          } catch {
-            /* leave the cached value in place */
+    // Onboarding: there are no saved profiles to show yet. Just probe the
+    // machine's current identity so Welcome → Add Profile can pre-fill it.
+    // Stash the probe so the Continue button can wait on it (capped below).
+    if (screen === "welcome") {
+      setLoading(false);
+      reconcileRef.current = api.reconcileActive()
+        .then((s) => {
+          if (s.unmanagedLogin || s.keyPath || s.gitEmail) {
+            setUntracked({
+              login: s.unmanagedLogin,
+              email: s.gitEmail,
+              keyPath: s.keyPath,
+            });
           }
-        };
-        const run = async () => {
-          const CONCURRENCY = 4; // ponytail: bounded fan-out; raise if probes still drag
-          for (let i = 0; i < list.length; i += CONCURRENCY) {
-            await Promise.all(list.slice(i, i + CONCURRENCY).map(check));
-          }
-          // Forget cached ids for profiles that no longer exist, then persist.
-          const live = new Set(list.map((p) => p.id));
-          for (const id of result) if (!live.has(id)) result.delete(id);
-          localStorage.setItem(BROKEN_KEY, JSON.stringify([...result]));
-        };
-        const idle = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 200));
-        idle(() => void run());
-      })
-      .catch(() => setLoading(false));
+          return s.keyPath ?? "";
+        })
+        .catch(() => "");
+      return;
+    }
 
-    api.reconcileActive()
-      .then((s) => {
-        if (s.matchedId) {
-          setActiveId(s.matchedId);
-          return s.matchedId;
-        }
-        if (s.unmanagedLogin || s.keyPath || s.gitEmail) {
-          setUntracked({
-            login: s.unmanagedLogin,
-            email: s.gitEmail,
-            keyPath: s.keyPath,
-          });
-        }
-        return api.getActiveProfile()
-          .then((id) => {
-            setActiveId(id);
-            return id;
-          })
-          .catch(() => null);
-      })
-      .catch(() => null);
+    // Returning user: do nothing but read the list from the DB and show it.
+    // No GitHub probes, no live identity reconcile — broken badges paint from
+    // the cached set, and the refresh button pulls fresh data on demand.
+    api.listProfiles()
+      .then((list) => setProfiles(list))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+
+    api.getActiveProfile()
+      .then(setActiveId)
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -227,11 +213,29 @@ function App() {
     }
   }
 
-  function completeWelcome() {
+  async function completeWelcome() {
     localStorage.setItem(ONBOARDED_KEY, "1");
-    // First run: if config already has a GitHub identity, hand the onboarding
-    // Add Profile step its key so it lands pre-synced and ready to save.
-    openAdd(untracked?.keyPath ?? "");
+    // First run: wait for the identity probe so Add Profile lands pre-synced.
+    // Keep the spinner visible briefly, but never let a slow/hung probe block
+    // onboarding — fall back to whatever we have after the cap.
+    const withCap = <T,>(p: Promise<T>, ms: number, fallback: T) =>
+      Promise.race([p, new Promise<T>((r) => setTimeout(() => r(fallback), ms))]);
+
+    const [keyPath, list] = await Promise.all([
+      withCap(reconcileRef.current, 4000, ""),
+      api.listProfiles().catch(() => [] as Profile[]),
+      new Promise((r) => setTimeout(r, 450)), // minimum so the spinner is seen
+    ]);
+
+    // Already have accounts? Skip Add Profile and drop straight into the list.
+    if (list.length > 0) {
+      setProfiles(list);
+      api.getActiveProfile().then(setActiveId).catch(() => {});
+      setScreen("profiles");
+      return;
+    }
+
+    openAdd(keyPath || untracked?.keyPath || "");
   }
 
   function handleSaveProfile(profile: Profile) {
@@ -257,6 +261,8 @@ function App() {
   return (
     <div className="relative h-screen w-screen bg-neutral-950 rounded-2xl overflow-hidden flex flex-col font-sans">
       <Background />
+
+      <AnimatePresence>{showSplash && <Splash />}</AnimatePresence>
 
       {/* Navbar is always visible unless on welcome/add-profile (though we could show it there too, let's keep it clean) */}
       {showLayout && (

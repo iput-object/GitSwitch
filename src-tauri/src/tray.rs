@@ -58,6 +58,13 @@ fn on_menu_event(app: &AppHandle, id: &str) {
 
 /// Create the tray icon and its menu (called once at startup).
 pub fn create(app: &AppHandle) -> tauri::Result<()> {
+    // Never register twice: a lingering tray (hot-reload, or a still-running
+    // prior instance) would otherwise trigger libayatana "already exported"
+    // warnings on the StatusNotifierItem D-Bus path.
+    if app.tray_by_id("main").is_some() {
+        return Ok(());
+    }
+
     let menu = build_menu(app)?;
     let mut builder = TrayIconBuilder::with_id("main")
         .tooltip("GitSwitch")

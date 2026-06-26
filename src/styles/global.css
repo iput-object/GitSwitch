@@ -41,3 +41,12 @@
 button {
   cursor: pointer;
 }
+
+/* WebKitGTK (Linux/Tauri) animates transforms on the main thread and judders
+   without a compositing hint. Promote every spinner to its own layer so
+   rotation stays smooth. */
+.animate-spin {
+  will-change: transform;
+  backface-visibility: hidden;
+  transform-origin: center;
+}

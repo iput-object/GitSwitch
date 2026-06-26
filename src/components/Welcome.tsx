@@ -4,11 +4,11 @@ import {
   useReducedMotion,
   type Variants,
 } from "motion/react";
-import { ArrowRight } from "@phosphor-icons/react";
+import { ArrowRight, CircleNotch } from "@phosphor-icons/react";
 import { api, type HostInfo } from "../services/tauri";
 
 type WelcomeProps = {
-  onContinue: () => void;
+  onContinue: () => void | Promise<void>;
 };
 
 /** Two-letter initials from an OS username like "ahad" or "ahad.aiman". */
@@ -41,6 +41,8 @@ export default function Welcome({ onContinue }: WelcomeProps) {
     username: "there",
     avatar: null,
   });
+  // Spins the button while onContinue does its (capped) startup work.
+  const [pending, setPending] = useState(false);
 
   useEffect(() => {
     api.getHostInfo()
@@ -49,6 +51,14 @@ export default function Welcome({ onContinue }: WelcomeProps) {
         /* keep the friendly default */
       });
   }, []);
+
+  async function handleContinue() {
+    if (pending) return;
+    setPending(true);
+    await onContinue();
+  }
+
+  const loading = pending;
 
   const display =
     host.username && host.username !== "there"
@@ -112,19 +122,33 @@ export default function Welcome({ onContinue }: WelcomeProps) {
       {/* CTA Button */}
       <motion.div variants={item}>
         <button
-          onClick={onContinue}
+          onClick={handleContinue}
+          disabled={loading}
           className="group relative inline-flex items-center gap-2 overflow-hidden
                      rounded-full bg-linear-to-br from-primary-400 to-primary-500 px-7 py-3
                      text-sm font-semibold text-neutral-950 cursor-pointer
-                     transition-[filter] hover:brightness-105"
+                     transition-[filter] hover:brightness-105 disabled:cursor-default disabled:brightness-100"
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-          <span className="relative">Continue</span>
-          <ArrowRight
-            weight="bold"
-            size={15}
-            className="relative transition-transform group-hover:translate-x-0.5"
-          />
+          {loading ? (
+            <>
+              <CircleNotch
+                weight="bold"
+                size={15}
+                className="relative animate-spin will-change-transform"
+              />
+              <span className="relative">Setting up</span>
+            </>
+          ) : (
+            <>
+              <span className="relative">Continue</span>
+              <ArrowRight
+                weight="bold"
+                size={15}
+                className="relative transition-transform group-hover:translate-x-0.5"
+              />
+            </>
+          )}
         </button>
       </motion.div>
     </motion.div>

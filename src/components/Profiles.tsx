@@ -124,9 +124,18 @@ export default function Profiles({
   const activeProfile = profiles.find((p) => p.id === activeId);
   const otherProfiles = profiles.filter((p) => p.id !== activeId);
 
+  // The detected identity counts as tracked if any of its handles — login,
+  // email, or key path — already match a saved profile (GitHub logins and
+  // emails are case-insensitive).
+  const norm = (s: string | null | undefined) => s?.trim().toLowerCase() ?? "";
   const alreadyTracked =
-    !!untracked?.login &&
-    profiles.some((p) => p.githubLogin === untracked.login);
+    !!untracked &&
+    profiles.some(
+      (p) =>
+        (!!untracked.login && norm(p.githubLogin) === norm(untracked.login)) ||
+        (!!untracked.email && norm(p.gitEmail) === norm(untracked.email)) ||
+        (!!untracked.keyPath && norm(p.keyPath) === norm(untracked.keyPath))
+    );
   const showImport =
     !!untracked && (!!untracked.login || !!untracked.email) && !alreadyTracked;
 

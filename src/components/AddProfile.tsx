@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { motion, useReducedMotion, type Variants } from "motion/react";
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type Variants,
+} from "motion/react";
 import {
   ArrowLeft,
   ArrowsClockwise,
@@ -19,9 +24,7 @@ import {
 } from "../services/tauri";
 
 type AddProfileProps = {
-  /** Prefill the input (e.g. importing an untracked key path). */
   initialInput?: string;
-  /** GitHub logins already saved, to block duplicates. */
   existingLogins?: string[];
   onCancel: () => void;
   onSave: (profile: StoredProfile) => void;
@@ -39,6 +42,20 @@ const item: Variants = {
 };
 
 const GITHUB_SSH_URL = "https://github.com/settings/ssh/new";
+
+const STATUS = {
+  empty: null,
+  path: {
+    dot: "bg-neutral-500",
+    text: "Reading as a key path.",
+    accent: false,
+  },
+  key: {
+    dot: "bg-primary-400 animate-pulse",
+    text: "Private key detected — we'll store it in ~/.ssh.",
+    accent: true,
+  },
+} as const;
 
 export default function AddProfile({
   initialInput = "",
@@ -60,6 +77,13 @@ export default function AddProfile({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const [focused, setFocused] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [shake, setShake] = useState(false);
+
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  const didAutoSync = useRef(false);
+
   const kind = useMemo<"empty" | "key" | "path">(() => {
     const t = input.trim();
     if (!t) return "empty";
@@ -67,9 +91,18 @@ export default function AddProfile({
     return "path";
   }, [input]);
 
-  // Opened with a prefilled key (importing an in-use identity)? Fetch the
-  // GitHub account straight away so the user lands on a ready-to-save card.
-  const didAutoSync = useRef(false);
+  // Auto-resize textarea
+  function autoResize() {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
+  useEffect(() => {
+    autoResize();
+  }, [input]);
+
   useEffect(() => {
     if (initialInput.trim() && !didAutoSync.current) {
       didAutoSync.current = true;
@@ -77,6 +110,11 @@ export default function AddProfile({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialInput]);
+
+  function triggerShake() {
+    setShake(true);
+    setTimeout(() => setShake(false), 400);
+  }
 
   async function handleCreate() {
     setError(null);
@@ -87,6 +125,7 @@ export default function AddProfile({
       setInput(k.keyPath);
     } catch (e) {
       setError(String(e));
+      triggerShake();
     } finally {
       setGenerating(false);
     }
@@ -95,6 +134,7 @@ export default function AddProfile({
   async function handleSync() {
     if (!input.trim()) {
       setError("Add a key path or paste a private key first.");
+      triggerShake();
       return;
     }
     setError(null);
@@ -103,12 +143,14 @@ export default function AddProfile({
       const acc = await api.syncGithub(input);
       if (existingLogins.includes(acc.login)) {
         setError(`@${acc.login} is already added.`);
-        return; // stay on the input stage; no duplicate
+        triggerShake();
+        return;
       }
       setAccount(acc);
       setEmail(acc.suggestedEmail);
     } catch (e) {
       setError(String(e));
+      triggerShake();
     } finally {
       setSyncing(false);
     }
@@ -131,12 +173,10 @@ export default function AddProfile({
     setError(null);
     setSaving(true);
     try {
-      // A staged key only moves into ~/.ssh now, at save time.
       const keyPath = account.managed
         ? await api.commitKey(account.keyPath, account.login)
         : account.keyPath;
       const name = account.name || account.login;
-      // Persist to SQLite (this also downloads + caches the avatar).
       const stored = await api.addProfile({
         displayName: name,
         gitName: name,
@@ -153,7 +193,22 @@ export default function AddProfile({
     }
   }
 
-  // ---- Confirm stage: identity pulled from GitHub ----
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = String(ev.target?.result ?? "").trim();
+      setInput(text);
+      if (generated && text !== generated.keyPath) setGenerated(null);
+      if (error) setError(null);
+    };
+    reader.readAsText(file);
+  }
+
+  // ---- Confirm stage ----
   if (account) {
     const name = account.name || account.login;
     return (
@@ -209,7 +264,7 @@ export default function AddProfile({
                        focus:border-primary-400/50 focus:bg-white/[0.07]"
           />
           <span className="mt-1.5 block text-xs text-neutral-500">
-            Pre-filled from GitHub. Edit it if you commit under a different
+            Pre-filled from GitHub. Edit if you commit under a different
             address.
           </span>
         </motion.label>
@@ -257,7 +312,9 @@ export default function AddProfile({
     );
   }
 
-  // ---- Input stage: provide a key, or create one ----
+  // ---- Input stage ----
+  const status = STATUS[kind];
+
   return (
     <motion.div
       variants={container}
@@ -279,27 +336,51 @@ export default function AddProfile({
         come straight from GitHub.
       </motion.p>
 
-      {/* The one smart input: a path or a pasted private key.
-          Wrapper is the field; the input flexes to fill, the button caps it. */}
       <motion.div variants={item} className="mt-6 w-full max-w-85 text-left">
+        {/* Input pill */}
         <div
-          className="flex h-12 items-center gap-1.5 rounded-full border border-white/10
-                     bg-white/5 pl-5 pr-1.5 transition-colors
-                     focus-within:border-primary-400/50 focus-within:bg-white/[0.07]"
+          onDragEnter={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragOver={(e) => e.preventDefault()}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          className={[
+            "flex min-h-12 items-center gap-1.5 rounded-full border pl-5 pr-1.5 transition-all duration-200",
+            // focus ring
+            focused && !dragging
+              ? "border-primary-400/60 bg-white/[0.07] ring-4 ring-primary-400/10"
+              : "",
+            // drag highlight
+            dragging
+              ? "border-dashed border-primary-400/50 bg-primary-400/5 ring-4 ring-primary-400/10"
+              : "",
+            // default
+            !focused && !dragging ? "border-white/10 bg-white/5" : "",
+            // shake on error
+            shake ? "animate-shake" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
         >
           <textarea
+            ref={taRef}
             rows={1}
             value={input}
             onChange={(e) => {
               setInput(e.target.value);
-              if (generated && e.target.value !== generated.keyPath) {
+              if (generated && e.target.value !== generated.keyPath)
                 setGenerated(null);
-              }
               if (error) setError(null);
             }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             spellCheck={false}
-            placeholder="Private key, or a path to one"
-            className="min-w-0 flex-1 resize-none overflow-hidden bg-transparent py-0
+            placeholder={
+              dragging ? "Drop key file here…" : "Private key, or a path to one"
+            }
+            className="min-w-0 flex-1 resize-none overflow-hidden bg-transparent py-3
                        font-mono text-[13px] leading-tight text-neutral-100 outline-none
                        placeholder:font-sans placeholder:text-neutral-500"
           />
@@ -322,56 +403,70 @@ export default function AddProfile({
           )}
         </div>
 
-        {/* Detection hint */}
-        <div className="mt-2 h-4 px-1">
-          {kind === "path" && (
-            <span className="text-xs text-neutral-500">
-              Reading as a key path.
-            </span>
-          )}
-          {kind === "key" && (
-            <span className="text-xs text-primary-300/80">
-              Private key detected. We&apos;ll store it in ~/.ssh.
-            </span>
-          )}
+        {/* Animated status hint */}
+        <div className="mt-2 h-5 px-1">
+          <AnimatePresence mode="wait">
+            {status && (
+              <motion.div
+                key={kind}
+                initial={reduce ? false : { opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.18 }}
+                className="flex items-center gap-1.5"
+              >
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${status.dot}`}
+                />
+                <span
+                  className={`text-xs ${status.accent ? "text-primary-300/80" : "text-neutral-500"}`}
+                >
+                  {status.text}
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
 
-      {/* Freshly generated key: copy the public half, add it to GitHub */}
-      {generated?.publicKey && (
-        <motion.div
-          initial={reduce ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE }}
-          className="relative mt-3 w-full max-w-85 rounded-xl border border-white/10 bg-white/3 p-3 text-left"
-        >
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-medium text-neutral-300">
-              New public key
-            </span>
-            <button
-              onClick={handleCopy}
-              className="inline-flex items-center gap-1 text-xs font-medium text-primary-300 hover:text-cyan-200"
-            >
-              {copied ? (
-                <Check size={12} weight="bold" />
-              ) : (
-                <Copy size={12} weight="bold" />
-              )}
-              {copied ? "Copied" : "Copy"}
-            </button>
-          </div>
-          <p className="max-h-12 overflow-y-auto break-all font-mono text-[11px] leading-relaxed text-neutral-400">
-            {generated.publicKey}
-          </p>
-          <button
-            onClick={() => openUrl(GITHUB_SSH_URL).catch(() => {})}
-            className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-medium text-neutral-300 hover:text-neutral-100"
+      {/* Generated key panel */}
+      <AnimatePresence>
+        {generated?.publicKey && (
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: 8, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: "auto" }}
+            exit={{ opacity: 0, y: -4, height: 0 }}
+            transition={{ duration: 0.35, ease: EASE }}
+            className="relative my-3 w-full max-w-85 overflow-hidden rounded-xl border border-white/10 bg-white/3 p-3 text-left"
           >
-            <GithubLogo size={14} weight="fill" /> Add it on GitHub
-          </button>
-        </motion.div>
-      )}
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-medium text-neutral-300">
+                New public key
+              </span>
+              <button
+                onClick={handleCopy}
+                className="inline-flex items-center gap-1 text-xs font-medium text-primary-300 hover:text-cyan-200"
+              >
+                {copied ? (
+                  <Check size={12} weight="bold" />
+                ) : (
+                  <Copy size={12} weight="bold" />
+                )}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+            <p className="max-h-12 overflow-y-auto break-all font-mono text-[11px] leading-relaxed text-neutral-400">
+              {generated.publicKey}
+            </p>
+            <button
+              onClick={() => openUrl(GITHUB_SSH_URL).catch(() => {})}
+              className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-medium text-neutral-300 hover:text-neutral-100"
+            >
+              <GithubLogo size={14} weight="fill" /> Add it on GitHub
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <motion.button
         variants={item}
