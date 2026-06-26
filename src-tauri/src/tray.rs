@@ -36,6 +36,11 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
 
 fn show_main(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
+        // Order matters on Windows: a window hidden via `hide()` keeps its
+        // taskbar-skip / minimized state, so `show()` alone can restore it
+        // off-screen or unfocused -> looks like "nothing happened". Clear
+        // skip-taskbar, un-minimize, then force focus to surface it.
+        let _ = window.set_skip_taskbar(false);
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
@@ -72,12 +77,29 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| on_menu_event(app, event.id().as_ref()))
         .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click {
-                button: MouseButton::Left,
-                button_state: MouseButtonState::Up,
-                ..
-            } = event
-            {
+            // Log every tray event so it's possible to tell, from the console,
+            // whether Windows is even emitting left-clicks (a known-flaky path
+            // when a menu is attached) vs. the window failing to surface.
+            eprintln!("tray event: {event:?}");
+
+            let surface = matches!(
+                event,
+                // Single left-click release: the primary "open" gesture.
+                TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    ..
+                }
+                // Double-click is emitted as its own event on Windows and does
+                // NOT come with a preceding usable Click on some versions, so
+                // handle it explicitly as a fallback.
+                | TrayIconEvent::DoubleClick {
+                    button: MouseButton::Left,
+                    ..
+                }
+            );
+
+            if surface {
                 show_main(tray.app_handle());
             }
         });
