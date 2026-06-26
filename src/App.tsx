@@ -1,5 +1,5 @@
 import "./styles/global.css";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { AnimatePresence } from "motion/react";
@@ -162,11 +162,16 @@ function App() {
     if (refreshingAllRef.current) return; // ignore re-trigger while in flight
     refreshingAllRef.current = true;
     setRefreshingAll(true);
+    const started = Date.now();
     try {
       for (const p of profiles) {
         await handleRefresh(p.id).catch(() => {});
       }
     } finally {
+      // Keep the icon spinning for at least one rotation so a fast refresh
+      // still reads as a refresh instead of a flicker.
+      const elapsed = Date.now() - started;
+      if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
       refreshingAllRef.current = false;
       setRefreshingAll(false);
     }
@@ -256,6 +261,20 @@ function App() {
     setScreen("welcome");
   }
 
+  // The in-use identity surfaced as a notification: present only when it isn't
+  // already saved (matched by login, email, or key path — all case-insensitive).
+  const addableIdentity = useMemo<Untracked | null>(() => {
+    if (!untracked || (!untracked.login && !untracked.email)) return null;
+    const norm = (s: string | null | undefined) => s?.trim().toLowerCase() ?? "";
+    const tracked = profiles.some(
+      (p) =>
+        (!!untracked.login && norm(p.githubLogin) === norm(untracked.login)) ||
+        (!!untracked.email && norm(p.gitEmail) === norm(untracked.email)) ||
+        (!!untracked.keyPath && norm(p.keyPath) === norm(untracked.keyPath))
+    );
+    return tracked ? null : untracked;
+  }, [untracked, profiles]);
+
   const showLayout = screen !== "welcome" && screen !== "add-profile";
 
   return (
@@ -270,7 +289,8 @@ function App() {
           onAdd={() => openAdd()}
           onRefresh={handleRefreshAll}
           refreshing={refreshingAll}
-          onSettings={() => setScreen("settings")}
+          notification={addableIdentity}
+          onImport={handleImport}
         />
       )}
 
@@ -305,9 +325,7 @@ function App() {
               broken={broken}
               loading={loading}
               activeId={activeId}
-              untracked={untracked}
               onAdd={() => openAdd()}
-              onImport={handleImport}
               onSelect={handleSelect}
               onDelete={handleDelete}
               onRefresh={handleRefresh}

@@ -33,6 +33,7 @@ This project requires Node.js and Rust.
 3. Build for production: `pnpm tauri build`
 
 ## Todo List
+- [ ] Add signature verification for SSH keys.
 - [ ] Add support for more Git providers (GitLab, Bitbucket, etc.)
 - [ ] Implement OAuth/Login flow as an alternative to SSH keys
 - [ ] Continuous performance improvements and optimizations

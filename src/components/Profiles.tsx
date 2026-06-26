@@ -12,7 +12,6 @@ import {
   PencilSimple,
 } from "@phosphor-icons/react";
 import type { StoredProfile } from "../services/tauri";
-import type { Untracked } from "../App";
 import ActiveProfile from "./ActiveProfile";
 
 type ProfilesProps = {
@@ -22,9 +21,7 @@ type ProfilesProps = {
   /** First DB read still in flight — suppresses the empty-state flash. */
   loading: boolean;
   activeId: string | null;
-  untracked: Untracked | null;
   onAdd: () => void;
-  onImport: () => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onRefresh: (id: string) => Promise<void>;
@@ -47,9 +44,7 @@ export default function Profiles({
   broken,
   loading,
   activeId,
-  untracked,
   onAdd,
-  onImport,
   onSelect,
   onDelete,
   onRefresh,
@@ -124,21 +119,6 @@ export default function Profiles({
   const activeProfile = profiles.find((p) => p.id === activeId);
   const otherProfiles = profiles.filter((p) => p.id !== activeId);
 
-  // The detected identity counts as tracked if any of its handles — login,
-  // email, or key path — already match a saved profile (GitHub logins and
-  // emails are case-insensitive).
-  const norm = (s: string | null | undefined) => s?.trim().toLowerCase() ?? "";
-  const alreadyTracked =
-    !!untracked &&
-    profiles.some(
-      (p) =>
-        (!!untracked.login && norm(p.githubLogin) === norm(untracked.login)) ||
-        (!!untracked.email && norm(p.gitEmail) === norm(untracked.email)) ||
-        (!!untracked.keyPath && norm(p.keyPath) === norm(untracked.keyPath))
-    );
-  const showImport =
-    !!untracked && (!!untracked.login || !!untracked.email) && !alreadyTracked;
-
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
       <div className="px-6 pt-5 pb-4 shrink-0 border-b border-white/6 z-10 bg-transparent backdrop-blur-md">
@@ -154,29 +134,6 @@ export default function Profiles({
         <h3 className="mb-3 text-[10px] font-medium uppercase tracking-wider text-neutral-500">
           Saved Profiles
         </h3>
-
-        {/* ── Import banner ─────────────────────────────────────── */}
-        {showImport && (
-          <div className="mb-3 flex items-center gap-3 rounded-xl border border-primary-400/20 bg-primary-400/6 px-3 py-2.5">
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-medium text-neutral-100">
-                In use, not added yet
-              </div>
-              <div className="truncate text-xs text-neutral-400">
-                {untracked?.login ? `@${untracked.login}` : untracked?.email} is
-                your current identity.
-              </div>
-            </div>
-            <button
-              onClick={onImport}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-linear-to-br
-                       from-primary-400 to-primary-500 px-3 py-1.5 text-xs font-semibold text-neutral-950
-                       transition-[filter] hover:brightness-105"
-            >
-              Import
-            </button>
-          </div>
-        )}
 
         {/* ── Profile list / empty state ────────────────────────── */}
         {/* Stay blank until the first DB read finishes, so the "No accounts"

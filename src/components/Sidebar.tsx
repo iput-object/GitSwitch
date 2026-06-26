@@ -8,6 +8,8 @@ import {
   Folder,
   ArrowsClockwise,
   ArrowSquareOut,
+  ArrowClockwise,
+  CircleNotch,
 } from "@phosphor-icons/react";
 
 type SidebarProps = {
@@ -33,31 +35,44 @@ export default function Sidebar({
   onRefreshAll,
   refreshingAll,
 }: SidebarProps) {
-  const [appVersion, setAppVersion] = React.useState("0.1.0");
+  const appVersion = __APP_VERSION__;
   const [updateAvailable, setUpdateAvailable] = React.useState<any>(null);
   const [isUpdating, setIsUpdating] = React.useState(false);
+  const [checking, setChecking] = React.useState(false);
+  const checkingRef = React.useRef(false);
+
+  const checkForUpdates = React.useCallback(async () => {
+    if (checkingRef.current) return; // ignore re-trigger while in flight
+    checkingRef.current = true;
+    setChecking(true);
+    const started = Date.now();
+    try {
+      const m = await import("@tauri-apps/plugin-updater");
+      const update = await m.check();
+      setUpdateAvailable(update ?? null);
+    } catch (e) {
+      console.error("Update check failed:", e);
+    } finally {
+      // Keep the spinner up for at least a beat so a fast check still reads.
+      const elapsed = Date.now() - started;
+      if (elapsed < 700) await new Promise((r) => setTimeout(r, 700 - elapsed));
+      checkingRef.current = false;
+      setChecking(false);
+    }
+  }, []);
 
   React.useEffect(() => {
-    import('@tauri-apps/api/app').then(m => m.getVersion().then(setAppVersion)).catch(console.error);
-
-    import('@tauri-apps/plugin-updater').then(async (m) => {
-      try {
-        const update = await m.check();
-        if (update) {
-          setUpdateAvailable(update);
-        }
-      } catch (e) {
-        console.error("Update check failed:", e);
-      }
-    }).catch(console.error);
-  }, []);
+    checkForUpdates();
+  }, [checkForUpdates]);
 
   const handleUpdateClick = async () => {
     if (!updateAvailable) return;
     setIsUpdating(true);
     try {
       await updateAvailable.downloadAndInstall();
-      alert("Update installed! Please restart GitSwitch to apply the new version.");
+      alert(
+        "Update installed! Please restart GitSwitch to apply the new version.",
+      );
     } catch (e) {
       console.error(e);
       alert("Failed to install update.");
@@ -128,25 +143,49 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* Version info */}
-      <div
-        className="mt-auto flex items-center gap-2 px-2.5"
-      >
-        <span className={`h-2 w-2 rounded-full ${updateAvailable ? "bg-amber-400 animate-pulse" : "bg-emerald-400"}`} />
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-neutral-300 cursor-pointer hover:underline" onClick={() => openUrl("https://github.com/iput-object/GitSwitch").catch(console.error)}>
+      {/* Version / updates */}
+      <div className="mt-auto flex items-center gap-2.5 px-1">
+        <button
+          onClick={updateAvailable ? handleUpdateClick : checkForUpdates}
+          disabled={checking || isUpdating}
+          aria-label={updateAvailable ? "Install update" : "Check for updates"}
+          title={updateAvailable ? "Install update" : "Check for updates"}
+          className={`shrink-0 transition-colors disabled:cursor-default ${
+            updateAvailable
+              ? "text-amber-400 hover:brightness-110"
+              : "text-neutral-500 hover:text-neutral-300"
+          }`}
+        >
+          {checking || isUpdating ? (
+            <CircleNotch size={15} weight="bold" className="animate-spin" />
+          ) : (
+            <ArrowClockwise size={15} weight="bold" />
+          )}
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <p
+            className="truncate text-xs font-medium text-neutral-300 cursor-pointer hover:underline"
+            onClick={() =>
+              openUrl("https://github.com/iput-object/GitSwitch").catch(
+                console.error,
+              )
+            }
+          >
             GitSwitch v{appVersion}
           </p>
           {updateAvailable ? (
-            <button 
+            <button
               onClick={handleUpdateClick}
               disabled={isUpdating}
-              className="text-[10px] text-amber-400 font-semibold text-left truncate transition hover:brightness-110 disabled:opacity-50"
+              className="truncate text-left text-[10px] font-semibold text-amber-400 transition hover:brightness-110 disabled:opacity-50"
             >
-              {isUpdating ? "Installing..." : "Update Available!"}
+              {isUpdating ? "Installing…" : "Update available — install"}
             </button>
           ) : (
-            <p className="text-[10px] text-neutral-500">Up to date</p>
+            <p className="text-[10px] text-neutral-500">
+              {checking ? "Checking…" : "Up to date"}
+            </p>
           )}
         </div>
       </div>
