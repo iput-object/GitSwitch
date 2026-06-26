@@ -51,7 +51,9 @@ fn find_avatar(username: &str) -> Option<String> {
     None
 }
 
-#[tauri::command]
+// `(async)` runs this off the main thread (reads the account picture from disk)
+// without making the body async — keeps the UI smooth.
+#[tauri::command(async)]
 pub fn get_host_info() -> HostInfo {
     let username = current_username();
     let avatar = find_avatar(&username);
