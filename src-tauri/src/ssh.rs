@@ -34,8 +34,15 @@ fn ssh_dir() -> Result<PathBuf, String> {
     Ok(dir)
 }
 
+// Run off the main thread (spawns a file manager) so the UI never stalls.
 #[tauri::command]
-pub fn open_ssh_folder(app: tauri::AppHandle) -> Result<(), String> {
+pub async fn open_ssh_folder(app: tauri::AppHandle) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || open_ssh_folder_sync(&app))
+        .await
+        .map_err(|e| format!("task failed: {e}"))?
+}
+
+fn open_ssh_folder_sync(app: &tauri::AppHandle) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
     let dir = ssh_dir()?;
     app.opener()
@@ -139,8 +146,15 @@ pub fn read_public_key(private_path: &Path) -> String {
     String::new()
 }
 
+// Runs the ssh-keygen subprocess; kept off the main thread to stay responsive.
 #[tauri::command]
-pub fn generate_ssh_key() -> Result<GeneratedKey, String> {
+pub async fn generate_ssh_key() -> Result<GeneratedKey, String> {
+    tauri::async_runtime::spawn_blocking(generate_ssh_key_sync)
+        .await
+        .map_err(|e| format!("task failed: {e}"))?
+}
+
+fn generate_ssh_key_sync() -> Result<GeneratedKey, String> {
     // Generated into staging, not ~/.ssh. It only moves home on save.
     let key_path = staged_key_path()?;
     let output = command("ssh-keygen")
@@ -192,8 +206,15 @@ pub fn resolve_key_input(input: &str) -> Result<(PathBuf, bool), String> {
 
 /// Move a staged key into ~/.ssh under a stable, login-based name and return
 /// the final path. Called only when the account is saved.
+// File moves + permission changes; off the main thread for consistency.
 #[tauri::command]
-pub fn commit_key(key_path: String, login: String) -> Result<String, String> {
+pub async fn commit_key(key_path: String, login: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || commit_key_sync(key_path, login))
+        .await
+        .map_err(|e| format!("task failed: {e}"))?
+}
+
+fn commit_key_sync(key_path: String, login: String) -> Result<String, String> {
     let src = PathBuf::from(&key_path);
     if !src.exists() {
         return Err("The key file is missing.".to_string());
@@ -287,8 +308,15 @@ pub fn ssh_identify(key_path: &Path) -> Result<String, String> {
 ///   "broken"  — file is gone, GitHub rejected the key, or it now belongs to a
 ///               different account. The profile will not work as-is.
 ///   "unknown" — could not reach GitHub. Don't flag the profile on this alone.
+// Network ssh round trip to GitHub; off the main thread so it can't freeze UI.
 #[tauri::command]
-pub fn check_profile(key_path: String, login: String) -> &'static str {
+pub async fn check_profile(key_path: String, login: String) -> &'static str {
+    tauri::async_runtime::spawn_blocking(move || check_profile_sync(key_path, login))
+        .await
+        .unwrap_or("unknown")
+}
+
+fn check_profile_sync(key_path: String, login: String) -> &'static str {
     let path = expand_path(&key_path);
     if !path.exists() {
         return "broken";

@@ -180,9 +180,16 @@ fn download_avatar(url: &str) -> Option<(Vec<u8>, String)> {
     Some((bytes, mime))
 }
 
+// Downloads the avatar + pulls GitHub stats (network); off the main thread.
 #[tauri::command]
-pub fn add_profile(app: AppHandle, profile: NewProfile) -> Result<StoredProfile, String> {
-    let conn = open(&app)?;
+pub async fn add_profile(app: AppHandle, profile: NewProfile) -> Result<StoredProfile, String> {
+    tauri::async_runtime::spawn_blocking(move || add_profile_sync(&app, profile))
+        .await
+        .map_err(|e| format!("task failed: {e}"))?
+}
+
+fn add_profile_sync(app: &AppHandle, profile: NewProfile) -> Result<StoredProfile, String> {
+    let conn = open(app)?;
 
     // One profile per GitHub account.
     let exists = conn
@@ -234,7 +241,7 @@ pub fn add_profile(app: AppHandle, profile: NewProfile) -> Result<StoredProfile,
     )
     .map_err(|e| format!("Could not save profile: {e}"))?;
 
-    crate::tray::rebuild(&app);
+    crate::tray::rebuild(app);
     Ok(StoredProfile {
         id,
         display_name: profile.display_name,
@@ -292,9 +299,18 @@ pub fn delete_all_profiles(app: AppHandle) -> Result<(), String> {
 
 /// Re-pull the display title, avatar, and stats from GitHub for a saved
 /// profile. The committed email and key are left untouched.
+///
+/// Async + `spawn_blocking`: the body makes blocking network calls, so it must
+/// run off the main thread or the whole UI freezes while it waits.
 #[tauri::command]
-pub fn refresh_profile(app: AppHandle, id: String) -> Result<StoredProfile, String> {
-    let conn = open(&app)?;
+pub async fn refresh_profile(app: AppHandle, id: String) -> Result<StoredProfile, String> {
+    tauri::async_runtime::spawn_blocking(move || refresh_profile_sync(&app, id))
+        .await
+        .map_err(|e| format!("Refresh task failed: {e}"))?
+}
+
+fn refresh_profile_sync(app: &AppHandle, id: String) -> Result<StoredProfile, String> {
+    let conn = open(app)?;
     let login: String = conn
         .query_row(
             "SELECT github_login FROM profiles WHERE id = ?1",
@@ -333,7 +349,7 @@ pub fn refresh_profile(app: AppHandle, id: String) -> Result<StoredProfile, Stri
     }
 
     let updated = read_one(&conn, &id);
-    crate::tray::rebuild(&app);
+    crate::tray::rebuild(app);
     updated
 }
 
@@ -383,11 +399,16 @@ fn verify_active(app: &AppHandle, git_name: String, git_email: String, key_path:
     });
 }
 
+// Writes git config + ~/.ssh/config (subprocess/file I/O); run off main thread.
 #[tauri::command]
-pub fn activate_profile(app: AppHandle, id: String) -> Result<(), String> {
-    activate(&app, &id)?;
-    crate::tray::rebuild(&app);
-    Ok(())
+pub async fn activate_profile(app: AppHandle, id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        activate(&app, &id)?;
+        crate::tray::rebuild(&app);
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("task failed: {e}"))?
 }
 
 /// Lightweight list for the tray menu: (id, display_name) plus the active id.
@@ -455,9 +476,16 @@ fn find_match(
 /// Reconcile the app with reality on startup: read the live SSH/git identity,
 /// match it to a saved profile (and mark it active), or report an untracked
 /// identity so the user can import it.
+// Reads live git/ssh identity (subprocess) and may hit GitHub; off main thread.
 #[tauri::command]
-pub fn reconcile_active(app: AppHandle) -> Result<ActiveState, String> {
-    let conn = open(&app)?;
+pub async fn reconcile_active(app: AppHandle) -> Result<ActiveState, String> {
+    tauri::async_runtime::spawn_blocking(move || reconcile_active_sync(&app))
+        .await
+        .map_err(|e| format!("task failed: {e}"))?
+}
+
+fn reconcile_active_sync(app: &AppHandle) -> Result<ActiveState, String> {
+    let conn = open(app)?;
     let git_name = crate::git::global("user.name");
     let git_email = crate::git::global("user.email");
     let key = crate::ssh::current_github_key();
@@ -497,14 +525,29 @@ pub fn get_active_profile(app: AppHandle) -> Result<Option<String>, String> {
     .map_err(|e| format!("Could not read active profile: {e}"))
 }
 
+// May re-activate (git/ssh subprocess) when editing the active profile; off
+// the main thread so the save never stalls the UI.
 #[tauri::command]
-pub fn update_profile_details(
+pub async fn update_profile_details(
     app: AppHandle,
     id: String,
     display_name: String,
     git_email: String,
 ) -> Result<(), String> {
-    let conn = open(&app)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        update_profile_details_sync(&app, id, display_name, git_email)
+    })
+    .await
+    .map_err(|e| format!("task failed: {e}"))?
+}
+
+fn update_profile_details_sync(
+    app: &AppHandle,
+    id: String,
+    display_name: String,
+    git_email: String,
+) -> Result<(), String> {
+    let conn = open(app)?;
     conn.execute(
         "UPDATE profiles SET display_name = ?1, git_name = ?1, git_email = ?2 WHERE id = ?3",
         params![display_name, git_email, id],
@@ -513,9 +556,9 @@ pub fn update_profile_details(
 
     let active_id = get_active_profile(app.clone()).unwrap_or(None);
     if active_id.as_deref() == Some(&id) {
-        let _ = activate(&app, &id);
+        let _ = activate(app, &id);
     }
 
-    crate::tray::rebuild(&app);
+    crate::tray::rebuild(app);
     Ok(())
 }

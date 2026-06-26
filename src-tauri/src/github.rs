@@ -106,8 +106,15 @@ fn noreply_email(login: &str, id: Option<u64>) -> String {
     }
 }
 
+// Network: ssh identify + GitHub API. Off the main thread to keep UI smooth.
 #[tauri::command]
-pub fn sync_github(input: String) -> Result<GithubAccount, String> {
+pub async fn sync_github(input: String) -> Result<GithubAccount, String> {
+    tauri::async_runtime::spawn_blocking(move || sync_github_sync(input))
+        .await
+        .map_err(|e| format!("task failed: {e}"))?
+}
+
+fn sync_github_sync(input: String) -> Result<GithubAccount, String> {
     let (key_path, managed) = ssh::resolve_key_input(&input)?;
     let login = ssh::ssh_identify(&key_path)?;
     let profile = fetch_profile(&login);

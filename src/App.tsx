@@ -162,6 +162,9 @@ function App() {
     if (refreshingAllRef.current) return; // ignore re-trigger while in flight
     refreshingAllRef.current = true;
     setRefreshingAll(true);
+    // Let the spinner paint a frame before the (network-bound) refresh starts,
+    // so the click feels instant instead of stalling on the first request.
+    await new Promise(requestAnimationFrame);
     const started = Date.now();
     try {
       for (const p of profiles) {

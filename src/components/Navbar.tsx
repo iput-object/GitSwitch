@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Plus, ArrowsClockwise, BellIcon, Minus, X } from "@phosphor-icons/react";
 
@@ -24,6 +24,14 @@ export default function Navbar({
   const appWindow = getCurrentWindow();
   const [open, setOpen] = useState(false);
   const hasNotification = !!notification;
+
+  // Spin starts the instant a refresh begins, but we let it finish the current
+  // rotation before stopping (at an animation-iteration boundary) so the icon
+  // never snaps back to 0deg mid-turn.
+  const [spinning, setSpinning] = useState(false);
+  useEffect(() => {
+    if (refreshing) setSpinning(true);
+  }, [refreshing]);
 
   return (
     <div
@@ -64,7 +72,10 @@ export default function Navbar({
           <ArrowsClockwise
             size={14}
             weight="bold"
-            className={refreshing ? "animate-spin" : ""}
+            className={refreshing || spinning ? "animate-spin" : ""}
+            onAnimationIteration={() => {
+              if (!refreshing) setSpinning(false);
+            }}
           />
         </button>
 

@@ -404,7 +404,7 @@ export default function AddProfile({
         </div>
 
         {/* Animated status hint */}
-        <div className="mt-2 h-5 px-1">
+        <div className="mt-1.5 h-4 px-1">
           <AnimatePresence mode="wait">
             {status && (
               <motion.div
@@ -473,7 +473,7 @@ export default function AddProfile({
         onClick={handleSync}
         disabled={syncing || kind === "empty"}
         whileTap={{ scale: 0.98 }}
-        className={`relative mt-1 inline-flex w-full max-w-85 items-center justify-center gap-2
+        className={`relative inline-flex w-full max-w-85 items-center justify-center gap-2
                    rounded-full py-3 text-sm font-semibold transition-[filter] hover:brightness-105 ${
                      error
                        ? "bg-rose-500 text-white"
