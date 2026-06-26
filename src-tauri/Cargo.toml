@@ -1,6 +1,6 @@
 [package]
 name = "gitswitch"
-version = "1.1.9"
+version = "1.2.0"
 description = "is something gets used for using and managing multiple git providers accounts"
 authors = ["you"]
 edition = "2021"

@@ -53,10 +53,20 @@ fn on_menu_event(app: &AppHandle, id: &str) {
         QUIT_ID => app.exit(0),
         NONE_ID => {}
         profile_id => {
-            if crate::db::activate(app, profile_id).is_ok() {
-                let _ = app.emit("active-changed", profile_id.to_string());
-            }
-            rebuild(app);
+            // Switching runs git config + ~/.ssh/config writes (subprocess +
+            // file I/O). Menu events fire on the main/event thread, so doing it
+            // inline blocks the whole GTK loop while it runs -- and if a git/ssh
+            // call ever stalls, the tray freezes for good (later clicks, even
+            // Quit, never get processed). Hand it to a worker so the menu stays
+            // live; `rebuild` and `emit` are both safe from another thread.
+            let app = app.clone();
+            let profile_id = profile_id.to_string();
+            std::thread::spawn(move || {
+                if crate::db::activate(&app, &profile_id).is_ok() {
+                    let _ = app.emit("active-changed", profile_id);
+                }
+                rebuild(&app);
+            });
         }
     }
 }
