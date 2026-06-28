@@ -4,6 +4,7 @@ version = "2.0.0"
 description = "is something gets used for using and managing multiple git providers accounts"
 authors = ["you"]
 edition = "2021"
+license = "GPL-3.0-only"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
