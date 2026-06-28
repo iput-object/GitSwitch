@@ -33,10 +33,9 @@ This project requires Node.js and Rust.
 3. Build for production: `pnpm tauri build`
 
 ## Todo List
-- [ ] Add signature verification for SSH keys.
+- [x] SSH commit signing — sets `gpg.format=ssh`, `user.signingkey`, and `commit.gpgsign` on profile switch.
 - [ ] Add support for more Git providers (GitLab, Bitbucket, etc.)
 - [ ] Implement OAuth/Login flow as an alternative to SSH keys
-- [ ] Continuous performance improvements and optimizations
 
 ## Contributing
 Contributions are highly welcome. If you have an idea, find a bug, or want to add a feature from the Todo list, feel free to open an issue or submit a pull request. Make sure your code is well-formatted and tested before submitting.

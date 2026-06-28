@@ -358,6 +358,13 @@ pub fn activate(app: &AppHandle, id: &str) -> Result<(), String> {
     crate::git::set_global("user.email", &git_email)?;
     crate::ssh::apply_ssh_config(&key_path)?;
 
+    // Sign commits with the same SSH key (GitHub's recommended flow). ssh-keygen
+    // does not expand `~`, so hand it an absolute path.
+    let signing_key = crate::ssh::expand_path(&key_path);
+    crate::git::set_global("gpg.format", "ssh")?;
+    crate::git::set_global("user.signingkey", &signing_key.to_string_lossy())?;
+    crate::git::set_global("commit.gpgsign", "true")?;
+
     set_setting(&conn, ACTIVE_KEY, id)?;
     verify_active(app, git_name, git_email, key_path);
     Ok(())

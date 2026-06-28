@@ -15,6 +15,22 @@ pub fn global(key: &str) -> Option<String> {
     (!value.is_empty()).then_some(value)
 }
 
+/// Dump the global git config as plain text for display ("Show Git Config").
+#[tauri::command]
+pub fn git_config() -> Result<String, String> {
+    let out = command("git")
+        .args(["config", "--global", "--list"])
+        .output()
+        .map_err(|e| format!("Could not run git: {e}"))?;
+    if !out.status.success() {
+        return Err(format!(
+            "git config failed: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
 /// Write a `git config --global <key> <value>`.
 pub fn set_global(key: &str, value: &str) -> Result<(), String> {
     let out = command("git")

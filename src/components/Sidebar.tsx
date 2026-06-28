@@ -6,19 +6,20 @@ import {
   Gear,
   GithubLogo,
   Folder,
-  ArrowsClockwise,
+  FileText,
+  Question,
   ArrowSquareOut,
   ArrowClockwise,
   CircleNotch,
 } from "@phosphor-icons/react";
+import Help from "./Help";
+import GitConfig from "./GitConfig";
 
 type SidebarProps = {
   activePage: string;
   onNavigate: (page: string) => void;
   onOpenGitHub: () => void;
   onOpenSSH: () => void;
-  onRefreshAll: () => void;
-  refreshingAll?: boolean;
 };
 
 const navItems = [
@@ -32,10 +33,10 @@ export default function Sidebar({
   onNavigate,
   onOpenGitHub,
   onOpenSSH,
-  onRefreshAll,
-  refreshingAll,
 }: SidebarProps) {
   const appVersion = __APP_VERSION__;
+  const [showGitConfig, setShowGitConfig] = React.useState(false);
+  const [showHelp, setShowHelp] = React.useState(false);
   const [updateAvailable, setUpdateAvailable] = React.useState<any>(null);
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [checking, setChecking] = React.useState(false);
@@ -129,16 +130,19 @@ export default function Sidebar({
           </button>
 
           <button
-            onClick={onRefreshAll}
-            disabled={refreshingAll}
+            onClick={() => setShowGitConfig(true)}
             className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-neutral-400 transition-colors cursor-pointer hover:text-neutral-200 hover:bg-white/3"
           >
-            <ArrowsClockwise
-              size={18}
-              weight="regular"
-              className={`shrink-0 ${refreshingAll ? "animate-spin" : ""}`}
-            />
-            <span className="truncate">Refresh Profiles</span>
+            <FileText size={18} weight="regular" className="shrink-0" />
+            <span className="truncate">Show Git Config</span>
+          </button>
+
+          <button
+            onClick={() => setShowHelp(true)}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-neutral-400 transition-colors cursor-pointer hover:text-neutral-200 hover:bg-white/3"
+          >
+            <Question size={18} weight="regular" className="shrink-0" />
+            <span className="truncate">Help</span>
           </button>
         </div>
       </div>
@@ -189,6 +193,10 @@ export default function Sidebar({
           )}
         </div>
       </div>
+
+      {showGitConfig && <GitConfig onClose={() => setShowGitConfig(false)} />}
+
+      {showHelp && <Help onClose={() => setShowHelp(false)} />}
     </aside>
   );
 }

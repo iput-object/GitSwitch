@@ -48,6 +48,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             host::get_host_info,
+            git::git_config,
             ssh::generate_ssh_key,
             ssh::commit_key,
             ssh::open_ssh_folder,

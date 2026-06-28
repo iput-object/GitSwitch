@@ -304,8 +304,6 @@ function App() {
             onNavigate={(page) => setScreen(page as Screen)}
             onOpenGitHub={handleOpenGitHub}
             onOpenSSH={handleOpenSSH}
-            onRefreshAll={handleRefreshAll}
-            refreshingAll={refreshingAll}
           />
         )}
 

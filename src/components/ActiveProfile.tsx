@@ -1,5 +1,5 @@
 import { motion, useReducedMotion, type Variants } from "motion/react";
-import { Envelope, ArrowSquareOut } from "@phosphor-icons/react";
+import { ArrowSquareOut } from "@phosphor-icons/react";
 import type { StoredProfile } from "../services/tauri";
 
 type ActiveProfileProps = {
@@ -76,12 +76,11 @@ export default function ActiveProfile({
                     <span className="text-lg font-semibold text-neutral-50">
                       {profile.displayName}
                     </span>
-                    <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
-                      ✓ Active
+                    <span className="px-2 py-0.5 text-[10px] font-semibold tracking-wide text-neutral-500">
+                      {"@" + profile.githubLogin}
                     </span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-1.5 text-xs text-neutral-400">
-                    <Envelope size={13} />
                     {profile.gitEmail}
                   </div>
                 </div>

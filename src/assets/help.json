@@ -1,0 +1,17 @@
+{
+  "_comment": "Contribute a help topic by adding a { q, a } entry to \"topics\". 'a' is markdown: **bold**, *italic*, `code`, [links](https://url) (open in the browser), and 1. numbered lists. Use \\n\\n between paragraphs.",
+  "topics": [
+    {
+      "q": "How does signing work here?",
+      "a": "When you switch profiles, GitSwitch points git at that profile's SSH key for both **auth** and **commit signing** (`gpg.format=ssh`, `commit.gpgsign=true`). Every commit is then signed automatically."
+    },
+    {
+      "q": "Why does GitHub say “Unverified”?",
+      "a": "GitHub stores **Authentication keys** and **Signing keys** separately. Pushing works because your key is registered for auth — but signatures stay “Unverified” until the *same* key is also added as a Signing Key.\n\n1. Open [github.com/settings/ssh/new](https://github.com/settings/ssh/new)\n2. Set **Key type → Signing Key** (not Authentication Key).\n3. Paste the profile's public key (the same `.pub` you use for auth) and save.\n\nOne key covers both roles. Past commits flip to “Verified” retroactively once the Signing Key is added."
+    },
+    {
+      "q": "Why can't it verify my email?",
+      "a": "The commit's email must be a **verified email** on that GitHub account, or the badge stays “Unverified” even with a valid signature. Add and verify it under [github.com/settings/emails](https://github.com/settings/emails), and make sure the profile's git email matches."
+    }
+  ]
+}

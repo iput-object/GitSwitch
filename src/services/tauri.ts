@@ -84,4 +84,7 @@ export const api = {
 
   // Host
   getHostInfo: () => invoke<HostInfo>("get_host_info"),
+
+  // Git
+  gitConfig: () => invoke<string>("git_config"),
 };
