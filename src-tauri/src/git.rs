@@ -16,7 +16,8 @@ pub fn global(key: &str) -> Option<String> {
 }
 
 /// Dump the global git config as plain text for display ("Show Git Config").
-#[tauri::command]
+// `(async)` runs this off the main thread (git subprocess).
+#[tauri::command(async)]
 pub fn git_config() -> Result<String, String> {
     let out = command("git")
         .args(["config", "--global", "--list"])
