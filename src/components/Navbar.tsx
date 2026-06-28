@@ -4,6 +4,7 @@ import { Plus, ArrowsClockwise, BellIcon, Minus, X } from "@phosphor-icons/react
 
 import logo from "../assets/logo.svg";
 import type { Untracked } from "../App";
+import Email from "./Email";
 
 type NavbarProps = {
   onAdd: () => void;
@@ -113,7 +114,7 @@ export default function Navbar({
                     <div className="mt-0.5 truncate text-xs text-neutral-400">
                       {notification?.login
                         ? `@${notification.login}`
-                        : notification?.email}{" "}
+                        : <Email value={notification?.email ?? ""} />}{" "}
                       is your current identity.
                     </div>
                     <button

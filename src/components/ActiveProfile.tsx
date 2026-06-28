@@ -1,6 +1,7 @@
 import { motion, useReducedMotion, type Variants } from "motion/react";
 import { ArrowSquareOut } from "@phosphor-icons/react";
 import type { StoredProfile } from "../services/tauri";
+import Email from "./Email";
 
 type ActiveProfileProps = {
   profile: StoredProfile | undefined;
@@ -81,7 +82,7 @@ export default function ActiveProfile({
                     </span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-1.5 text-xs text-neutral-400">
-                    {profile.gitEmail}
+                    <Email value={profile.gitEmail} />
                   </div>
                 </div>
 

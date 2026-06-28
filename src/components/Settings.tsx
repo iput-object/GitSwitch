@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { TrayIcon } from "@tauri-apps/api/tray";
 import { api } from "../services/tauri";
+import { useHideEmail, setHideEmail } from "./Email";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -55,6 +56,7 @@ type SettingsProps = {
 
 export default function Settings({ onClearAllProfiles }: SettingsProps) {
   const reduce = useReducedMotion();
+  const hideEmail = useHideEmail();
   const [autostart, setAutostart] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showTrayIcon, setShowTrayIcon] = useState(() => {
@@ -110,6 +112,24 @@ export default function Settings({ onClearAllProfiles }: SettingsProps) {
         animate="show"
         className="flex flex-col gap-6"
       >
+        {/* Appearance Category */}
+        <motion.section variants={item}>
+          <div className="mb-3">
+            <h3 className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
+              Appearance
+            </h3>
+          </div>
+
+          <div className="rounded-xl border border-white/6 bg-white/2 px-4 py-1">
+            <Toggle
+              label="Hide email addresses"
+              description="Mask the local part of every email (••••••@domain) so it isn't exposed on screen or in screenshots."
+              checked={hideEmail}
+              onChange={setHideEmail}
+            />
+          </div>
+        </motion.section>
+
         {/* System Category */}
         <motion.section variants={item}>
           <div className="mb-3">

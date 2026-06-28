@@ -1,5 +1,6 @@
 import { motion, useReducedMotion, type Variants } from "motion/react";
 import type { StoredProfile } from "../services/tauri";
+import Email from "./Email";
 
 type DashboardProps = {
   profiles: StoredProfile[];
@@ -59,7 +60,7 @@ export default function Dashboard({ profiles, activeId }: DashboardProps) {
             <span className="ml-1.5 font-normal text-neutral-500">@{active.githubLogin}</span>
           </p>
           <p className="truncate text-xs text-neutral-500">
-            {active.gitEmail}
+            <Email value={active.gitEmail} />
           </p>
         </div>
       </motion.div>

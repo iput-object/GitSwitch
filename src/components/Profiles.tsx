@@ -13,6 +13,7 @@ import {
 } from "@phosphor-icons/react";
 import type { StoredProfile } from "../services/tauri";
 import ActiveProfile from "./ActiveProfile";
+import Email from "./Email";
 
 type ProfilesProps = {
   profiles: StoredProfile[];
@@ -219,7 +220,7 @@ export default function Profiles({
                       )}
                     </div>
                     <div className="truncate text-[11px] text-neutral-500">
-                      {p.gitEmail}
+                      <Email value={p.gitEmail} />
                     </div>
                   </div>
 
