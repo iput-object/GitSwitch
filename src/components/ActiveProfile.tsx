@@ -1,11 +1,18 @@
-import { motion, useReducedMotion, type Variants } from "motion/react";
-import { ArrowSquareOut } from "@phosphor-icons/react";
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type Variants,
+} from "motion/react";
+import { PencilSimple } from "@phosphor-icons/react";
 import type { StoredProfile } from "../services/tauri";
 import Email from "./Email";
+import { useState } from "react";
+import EditProfileModal from "./EditProfileModal";
 
 type ActiveProfileProps = {
   profile: StoredProfile | undefined;
-  onOpenGitHub: () => void;
+  onUpdate: (id: string, name: string, email: string) => Promise<void>;
 };
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -24,9 +31,10 @@ const item: Variants = {
 
 export default function ActiveProfile({
   profile,
-  onOpenGitHub,
+  onUpdate,
 }: ActiveProfileProps) {
   const reduce = useReducedMotion();
+  const [editing, setEditing] = useState(false);
 
   if (!profile) return null;
 
@@ -116,15 +124,24 @@ export default function ActiveProfile({
               </div>
 
               <button
-                onClick={onOpenGitHub}
+                onClick={() => setEditing(true)}
                 className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-white/6 bg-white/3 px-3 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:bg-white/6 hover:text-neutral-100"
               >
-                Open GitHub <ArrowSquareOut size={13} />
+                Edit Profile <PencilSimple size={13} />
               </button>
             </div>
           </div>
         </div>
       </motion.div>
+      <AnimatePresence>
+        {editing && (
+          <EditProfileModal
+            profile={profile}
+            onUpdate={onUpdate}
+            onClose={() => setEditing(false)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

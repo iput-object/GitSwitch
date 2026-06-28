@@ -14,6 +14,7 @@ import {
 import type { StoredProfile } from "../services/tauri";
 import ActiveProfile from "./ActiveProfile";
 import Email from "./Email";
+import EditProfileModal from "./EditProfileModal";
 
 type ProfilesProps = {
   profiles: StoredProfile[];
@@ -50,37 +51,23 @@ export default function Profiles({
   onDelete,
   onRefresh,
   onUpdate,
-  onOpenGitHub,
 }: ProfilesProps) {
   const reduce = useReducedMotion();
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<StoredProfile | null>(
+    null,
+  );
   const [isScrolling, setIsScrolling] = useState(false);
   const scrollTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
 
   function startEditing(p: StoredProfile) {
-    setEditingId(p.id);
-    setEditName(p.displayName);
-    setEditEmail(p.gitEmail);
+    setEditingProfile(p);
     setMenuOpenId(null);
-  }
-
-  async function handleSaveEdit(id: string) {
-    setIsUpdating(true);
-    try {
-      await onUpdate(id, editName, editEmail);
-    } finally {
-      setIsUpdating(false);
-      setEditingId(null);
-    }
   }
 
   function handleScroll() {
@@ -124,7 +111,7 @@ export default function Profiles({
     <div className="flex-1 flex flex-col min-h-0 relative">
       <div className="px-6 pt-5 pb-4 shrink-0 border-b border-white/6 z-10 bg-transparent backdrop-blur-md">
         {/* ── Active Profile ────────────────────────────────────── */}
-        <ActiveProfile profile={activeProfile} onOpenGitHub={onOpenGitHub} />
+        <ActiveProfile profile={activeProfile} onUpdate={onUpdate} />
       </div>
 
       <div
@@ -141,22 +128,22 @@ export default function Profiles({
             state doesn't flash before profiles arrive. */}
         {profiles.length === 0 ? (
           loading ? null : (
-          <div className="flex flex-1 flex-col items-center justify-center text-center">
-            <UserCircle
-              size={40}
-              weight="thin"
-              className="mb-3 text-neutral-600"
-            />
-            <p className="text-sm text-neutral-400">No accounts yet.</p>
-            <button
-              onClick={onAdd}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-linear-to-br
+            <div className="flex flex-1 flex-col items-center justify-center text-center">
+              <UserCircle
+                size={40}
+                weight="thin"
+                className="mb-3 text-neutral-600"
+              />
+              <p className="text-sm text-neutral-400">No accounts yet.</p>
+              <button
+                onClick={onAdd}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-linear-to-br
                        from-primary-400 to-primary-500 px-4 py-2 text-sm font-semibold text-neutral-950
                        transition-[filter] hover:brightness-105"
-            >
-              <Plus size={15} weight="bold" /> Add an account
-            </button>
-          </div>
+              >
+                <Plus size={15} weight="bold" /> Add an account
+              </button>
+            </div>
           )
         ) : otherProfiles.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center text-center pb-8">
@@ -368,68 +355,12 @@ export default function Profiles({
 
       {/* Edit Profile Modal */}
       <AnimatePresence>
-        {editingId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => !isUpdating && setEditingId(null)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-sm rounded-2xl border border-white/10 bg-neutral-900 p-5 shadow-2xl"
-            >
-              <h2 className="mb-4 text-lg font-semibold text-white">
-                Edit Profile
-              </h2>
-              <div className="flex flex-col gap-3">
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-neutral-400">
-                    Display Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    disabled={isUpdating}
-                    className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none focus:border-primary-400/50"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-neutral-400">
-                    Email Address
-                  </label>
-                  <input
-                    type="text"
-                    value={editEmail}
-                    onChange={(e) => setEditEmail(e.target.value)}
-                    disabled={isUpdating}
-                    className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none focus:border-primary-400/50"
-                  />
-                </div>
-              </div>
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  onClick={() => setEditingId(null)}
-                  disabled={isUpdating}
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-400 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-50 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleSaveEdit(editingId)}
-                  disabled={isUpdating}
-                  className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-neutral-950 transition-colors hover:brightness-110 disabled:opacity-50 cursor-pointer"
-                >
-                  {isUpdating ? "Saving..." : "Save Changes"}
-                </button>
-              </div>
-            </motion.div>
-          </div>
+        {editingProfile && (
+          <EditProfileModal
+            profile={editingProfile}
+            onUpdate={onUpdate}
+            onClose={() => setEditingProfile(null)}
+          />
         )}
       </AnimatePresence>
     </div>
