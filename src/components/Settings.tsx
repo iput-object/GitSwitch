@@ -3,52 +3,10 @@ import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { TrayIcon } from "@tauri-apps/api/tray";
 import { api } from "../services/tauri";
 import { useHideEmail, setHideEmail } from "./Email";
-import { motion, useReducedMotion, type Variants } from "motion/react";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
-const container: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.05, delayChildren: 0.04 } },
-};
-const item: Variants = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } },
-};
-
-type ToggleProps = {
-  label: string;
-  description?: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-};
-
-function Toggle({ label, description, checked, onChange }: ToggleProps) {
-  return (
-    <div className="flex items-center justify-between py-3">
-      <div className="flex flex-col pr-4">
-        <span className="text-sm font-medium text-neutral-200">{label}</span>
-        {description && (
-          <span className="text-xs text-neutral-500 mt-0.5">{description}</span>
-        )}
-      </div>
-      <button
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900 ${
-          checked ? "bg-primary-500" : "bg-neutral-700"
-        }`}
-      >
-        <span className="sr-only">Toggle {label}</span>
-        <span
-          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full shadow ring-0 transition duration-200 ease-in-out ${
-            checked ? "translate-x-4 bg-white" : "translate-x-0 bg-neutral-300"
-          }`}
-        />
-      </button>
-    </div>
-  );
-}
+import { Toggle } from "./ui/Toggle";
+import { Button } from "./ui/Button";
+import { container, item } from "../utils/motion";
+import { motion, useReducedMotion } from "motion/react";
 
 type SettingsProps = {
   onClearAllProfiles: () => void;
@@ -169,26 +127,30 @@ export default function Settings({ onClearAllProfiles }: SettingsProps) {
               </div>
               {confirmDelete ? (
                 <div className="flex gap-2 shrink-0">
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setConfirmDelete(false)}
-                    className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-white/10 transition-colors cursor-pointer"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
                     onClick={handleDeleteAllProfiles}
-                    className="rounded-md border border-red-500/50 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
                   >
                     Confirm Delete
-                  </button>
+                  </Button>
                 </div>
               ) : (
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
                   onClick={() => setConfirmDelete(true)}
-                  className="shrink-0 rounded-md border border-red-500/50 bg-transparent px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
                 >
                   Delete All
-                </button>
+                </Button>
               )}
             </div>
           </div>

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { AnimatePresence } from "motion/react";
-import { api, type StoredProfile } from "./services/tauri";
+import { api, type StoredProfile, type ProviderActive } from "./services/tauri";
 import Background from "./components/Background";
 import Splash from "./components/Splash";
 import Navbar from "./components/Navbar";
@@ -19,6 +19,7 @@ type Screen = "welcome" | "add-profile" | "profiles" | "ssh-keys" | "settings";
 type Profile = StoredProfile;
 
 export type Untracked = {
+  providerId: string | null;
   login: string | null;
   email: string | null;
   keyPath: string | null;
@@ -53,6 +54,9 @@ function App() {
   const [refreshingAll, setRefreshingAll] = useState(false);
   const refreshingAllRef = useRef(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // The partially-active set: profiles whose provider host block points at their
+  // key, even though another profile owns the global commit identity.
+  const [partial, setPartial] = useState<ProviderActive[]>([]);
   const [untracked, setUntracked] = useState<Untracked | null>(null);
   const [pendingInput, setPendingInput] = useState("");
   // Splash only appears if the first load is slow enough to notice, so a fast
@@ -80,31 +84,42 @@ function App() {
       setLoading(false);
       reconcileRef.current = api.reconcileActive()
         .then((s) => {
-          if (s.unmanagedLogin || s.keyPath || s.gitEmail) {
+          const first = s.untracked[0];
+          if (first || s.gitEmail) {
             setUntracked({
-              login: s.unmanagedLogin,
+              providerId: first?.providerId ?? null,
+              login: first?.login ?? null,
               email: s.gitEmail,
-              keyPath: s.keyPath,
+              keyPath: first?.keyPath ?? null,
             });
           }
-          return s.keyPath ?? "";
+          return first?.keyPath ?? "";
         })
         .catch(() => "");
       return;
     }
 
     // Returning user: do nothing but read the list from the DB and show it.
-    // No GitHub probes, no live identity reconcile — broken badges paint from
+    // No provider probes, no live identity reconcile — broken badges paint from
     // the cached set, and the refresh button pulls fresh data on demand.
     api.listProfiles()
       .then((list) => setProfiles(list))
       .catch(() => {})
       .finally(() => setLoading(false));
 
-    api.getActiveProfile()
-      .then(setActiveId)
-      .catch(() => {});
+    refreshActiveState();
   }, []);
+
+  // Pull the fully-active id and the partially-active set from the DB. Cheap
+  // (no network), so it's safe to call after any activation.
+  function refreshActiveState() {
+    api.getActiveState()
+      .then((s) => {
+        setActiveId(s.activeId);
+        setPartial(s.partial);
+      })
+      .catch(() => {});
+  }
 
   useEffect(() => {
     import("@tauri-apps/api/tray").then(({ TrayIcon }) => {
@@ -119,6 +134,7 @@ function App() {
     const unlisten = listen<string>("active-changed", (e) => {
       setActiveId(e.payload);
       setUntracked(null);
+      refreshActiveState();
     });
     return () => {
       unlisten.then((off) => off());
@@ -138,7 +154,9 @@ function App() {
     setActiveId(id);
     setUntracked(null);
 
-    api.activateProfile(id).catch(() => {});
+    api.activateProfile(id)
+      .then(refreshActiveState)
+      .catch(() => {});
 
     api.refreshProfile(id)
       .then((updated) =>
@@ -203,10 +221,13 @@ function App() {
     }
   }
 
-  function handleOpenGitHub() {
+  // Open the active profile's page on its own provider (github.com, gitlab.com,
+  // a self-hosted host, …) — falling back to the provider host root.
+  function handleOpenProfile() {
     const active = profiles.find((p) => p.id === activeId);
-    if (active && active.githubLogin) {
-      openUrl(`https://github.com/${active.githubLogin}`).catch(() => {});
+    if (active) {
+      const base = `https://${active.providerHost}`;
+      openUrl(active.login ? `${base}/${active.login}` : base).catch(() => {});
     } else {
       openUrl("https://github.com").catch(() => {});
     }
@@ -238,7 +259,7 @@ function App() {
     // Already have accounts? Skip Add Profile and drop straight into the list.
     if (list.length > 0) {
       setProfiles(list);
-      api.getActiveProfile().then(setActiveId).catch(() => {});
+      refreshActiveState();
       setScreen("profiles");
       return;
     }
@@ -251,7 +272,7 @@ function App() {
     setUntracked(null);
     setActiveId((current) => {
       if (current) return current;
-      api.activateProfile(profile.id).catch(() => {});
+      api.activateProfile(profile.id).then(refreshActiveState).catch(() => {});
       return profile.id;
     });
     setScreen("profiles");
@@ -260,6 +281,7 @@ function App() {
   async function handleClearAllProfiles() {
     setProfiles([]);
     setActiveId(null);
+    setPartial([]);
     setUntracked(null);
     setScreen("welcome");
   }
@@ -271,12 +293,18 @@ function App() {
     const norm = (s: string | null | undefined) => s?.trim().toLowerCase() ?? "";
     const tracked = profiles.some(
       (p) =>
-        (!!untracked.login && norm(p.githubLogin) === norm(untracked.login)) ||
+        (untracked.providerId && p.providerId === untracked.providerId && !!untracked.login && norm(p.login) === norm(untracked.login)) ||
         (!!untracked.email && norm(p.gitEmail) === norm(untracked.email)) ||
         (!!untracked.keyPath && norm(p.keyPath) === norm(untracked.keyPath))
     );
     return tracked ? null : untracked;
   }, [untracked, profiles]);
+
+  // Profile ids whose provider host block currently points at their key.
+  const partialIds = useMemo(
+    () => new Set(partial.map((p) => p.profileId)),
+    [partial]
+  );
 
   const showLayout = screen !== "welcome" && screen !== "add-profile";
 
@@ -302,7 +330,10 @@ function App() {
           <Sidebar
             activePage={screen}
             onNavigate={(page) => setScreen(page as Screen)}
-            onOpenGitHub={handleOpenGitHub}
+            onOpenProfile={handleOpenProfile}
+            activeProviderName={
+              profiles.find((p) => p.id === activeId)?.providerName ?? null
+            }
             onOpenSSH={handleOpenSSH}
           />
         )}
@@ -313,7 +344,7 @@ function App() {
           {screen === "add-profile" && (
             <AddProfile
               initialInput={pendingInput}
-              existingLogins={profiles.map((p) => p.githubLogin)}
+              existingLogins={profiles.map((p) => `${p.login}@${p.providerId}`)}
               showCancel={profiles.length > 0}
               onCancel={() => setScreen("profiles")}
               onSave={handleSaveProfile}
@@ -326,12 +357,13 @@ function App() {
               broken={broken}
               loading={loading}
               activeId={activeId}
+              partialIds={partialIds}
               onAdd={() => openAdd()}
               onSelect={handleSelect}
               onDelete={handleDelete}
               onRefresh={handleRefresh}
               onUpdate={handleUpdateProfile}
-              onOpenGitHub={handleOpenGitHub}
+              onOpenProfile={handleOpenProfile}
             />
           )}
 

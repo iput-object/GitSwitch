@@ -6,6 +6,7 @@ import {
 } from "motion/react";
 import { PencilSimple } from "@phosphor-icons/react";
 import type { StoredProfile } from "../services/tauri";
+import { ProviderIcon } from "./ProviderIcon";
 import Email from "./Email";
 import { useState } from "react";
 import EditProfileModal from "./EditProfileModal";
@@ -37,6 +38,13 @@ export default function ActiveProfile({
   const [editing, setEditing] = useState(false);
 
   if (!profile) return null;
+
+  // Only GitHub exposes these unauthenticated; hide the row otherwise instead
+  // of showing a misleading string of zeros.
+  const hasStats =
+    profile.publicRepos != null ||
+    profile.followers != null ||
+    profile.commits != null;
 
   const initials = profile.displayName
     .split(" ")
@@ -82,11 +90,12 @@ export default function ActiveProfile({
               <div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg font-semibold text-neutral-50">
+                    <span className="text-lg font-semibold text-neutral-50 flex items-center gap-2">
+                      <ProviderIcon kind={profile.providerKind} size={18} className="text-neutral-400" />
                       {profile.displayName}
                     </span>
                     <span className="px-2 py-0.5 text-[10px] font-semibold tracking-wide text-neutral-500">
-                      {"@" + profile.githubLogin}
+                      {"@" + profile.login}
                     </span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-1.5 text-xs text-neutral-400">
@@ -95,32 +104,34 @@ export default function ActiveProfile({
                 </div>
 
                 {/* Stats row */}
-                <div className="mt-4 flex items-center gap-6 text-sm text-neutral-500">
-                  <span>
-                    <span className="text-base font-semibold text-neutral-200">
-                      {profile.publicRepos ?? 0}
-                    </span>{" "}
-                    repos
-                  </span>
+                {hasStats && (
+                  <div className="mt-4 flex items-center gap-6 text-sm text-neutral-500">
+                    <span>
+                      <span className="text-base font-semibold text-neutral-200">
+                        {profile.publicRepos ?? 0}
+                      </span>{" "}
+                      repos
+                    </span>
 
-                  <span className="h-4 w-px bg-white/10" />
+                    <span className="h-4 w-px bg-white/10" />
 
-                  <span>
-                    <span className="text-base font-semibold text-neutral-200">
-                      {profile.followers ?? 0}
-                    </span>{" "}
-                    followers
-                  </span>
+                    <span>
+                      <span className="text-base font-semibold text-neutral-200">
+                        {profile.followers ?? 0}
+                      </span>{" "}
+                      followers
+                    </span>
 
-                  <span className="h-4 w-px bg-white/10" />
+                    <span className="h-4 w-px bg-white/10" />
 
-                  <span>
-                    <span className="text-base font-semibold text-neutral-200">
-                      {profile.commits ?? 0}
-                    </span>{" "}
-                    commits
-                  </span>
-                </div>
+                    <span>
+                      <span className="text-base font-semibold text-neutral-200">
+                        {profile.commits ?? 0}
+                      </span>{" "}
+                      commits
+                    </span>
+                  </div>
+                )}
               </div>
 
               <button

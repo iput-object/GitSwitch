@@ -12,7 +12,7 @@ const QUIT_ID: &str = "__quit";
 const NONE_ID: &str = "__none";
 
 fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
-    let (profiles, active) = crate::db::list_for_tray(app);
+    let (profiles, active) = crate::database::list_for_tray(app);
     let mut items = tauri::menu::MenuBuilder::new(app);
 
     if profiles.is_empty() {
@@ -62,7 +62,7 @@ fn on_menu_event(app: &AppHandle, id: &str) {
             let app = app.clone();
             let profile_id = profile_id.to_string();
             std::thread::spawn(move || {
-                if crate::db::activate(&app, &profile_id).is_ok() {
+                if crate::database::activate(&app, &profile_id).is_ok() {
                     let _ = app.emit("active-changed", profile_id);
                 }
                 rebuild(&app);

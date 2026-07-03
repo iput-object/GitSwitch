@@ -6,7 +6,6 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct HostInfo {
-    /// The current OS account name (e.g. "ahad").
     username: String,
     /// The account picture as a `data:` URI, when one can be found.
     avatar: Option<String>,

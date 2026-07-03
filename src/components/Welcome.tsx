@@ -1,9 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  motion,
-  useReducedMotion,
-  type Variants,
-} from "motion/react";
+import { motion, useReducedMotion, type Variants } from "motion/react";
 import { ArrowRight, CircleNotch } from "@phosphor-icons/react";
 import { api, type HostInfo } from "../services/tauri";
 
@@ -11,7 +7,6 @@ type WelcomeProps = {
   onContinue: () => void | Promise<void>;
 };
 
-/** Two-letter initials from an OS username like "ahad" or "ahad.aiman". */
 function initials(name: string): string {
   const parts = name
     .replace(/[._\-]+/g, " ")
@@ -45,7 +40,8 @@ export default function Welcome({ onContinue }: WelcomeProps) {
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
-    api.getHostInfo()
+    api
+      .getHostInfo()
       .then(setHost)
       .catch(() => {
         /* keep the friendly default */
@@ -75,10 +71,7 @@ export default function Welcome({ onContinue }: WelcomeProps) {
                  overflow-hidden px-8 text-center"
     >
       {/* Avatar */}
-      <motion.div
-        variants={item}
-        className="relative mb-6"
-      >
+      <motion.div variants={item} className="relative mb-6">
         <div className="absolute inset-0 rounded-full bg-primary-400/30 blur-xl" />
         <div
           className="relative flex h-20 w-20 items-center justify-center overflow-hidden
@@ -115,8 +108,8 @@ export default function Welcome({ onContinue }: WelcomeProps) {
         variants={item}
         className="relative mb-9 max-w-75 text-sm leading-relaxed text-neutral-400"
       >
-        Manage every GitHub identity on this machine and switch between them in a
-        single click, straight from your tray.
+        Manage every Git provider identity on this machine and switch between
+        them in a single click, straight from your tray.
       </motion.p>
 
       {/* CTA Button */}

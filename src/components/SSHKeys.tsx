@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Key, Copy, Check } from "@phosphor-icons/react";
+import { Copy, Check } from "@phosphor-icons/react";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 import type { StoredProfile } from "../services/tauri";
+import { ProviderIcon } from "./ProviderIcon";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const container: Variants = {
@@ -50,14 +51,14 @@ export default function SSHKeys({ profiles }: SSHKeysProps) {
             >
               <div className="flex items-center gap-4">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-400/10 text-primary-400">
-                  <Key size={20} weight="duotone" />
+                  <ProviderIcon kind={p.providerKind} size={20} />
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-neutral-200">
                     {p.keyPath.split("/").pop()}
                   </div>
                   <div className="text-xs text-neutral-500 mt-0.5">
-                    Used by @{p.githubLogin}
+                    Used by @{p.login}
                   </div>
                 </div>
               </div>

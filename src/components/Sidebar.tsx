@@ -18,7 +18,9 @@ import GitConfig from "./GitConfig";
 type SidebarProps = {
   activePage: string;
   onNavigate: (page: string) => void;
-  onOpenGitHub: () => void;
+  onOpenProfile: () => void;
+  /** Name of the active profile's provider, for the "Open …" label. */
+  activeProviderName: string | null;
   onOpenSSH: () => void;
 };
 
@@ -31,7 +33,8 @@ const navItems = [
 export default function Sidebar({
   activePage,
   onNavigate,
-  onOpenGitHub,
+  onOpenProfile,
+  activeProviderName,
   onOpenSSH,
 }: SidebarProps) {
   const appVersion = __APP_VERSION__;
@@ -112,11 +115,13 @@ export default function Sidebar({
         </p>
         <div className="flex flex-col gap-0.5">
           <button
-            onClick={onOpenGitHub}
+            onClick={onOpenProfile}
             className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-neutral-400 transition-colors cursor-pointer hover:text-neutral-200 hover:bg-white/3"
           >
             <GithubLogo size={18} weight="regular" className="shrink-0" />
-            <span className="truncate">Open GitHub</span>
+            <span className="truncate">
+              Open {activeProviderName ?? "provider"}
+            </span>
             <ArrowSquareOut size={12} className="ml-auto shrink-0" />
           </button>
 

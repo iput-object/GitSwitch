@@ -57,7 +57,7 @@ export default function Dashboard({ profiles, activeId }: DashboardProps) {
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-neutral-50">
             {active.displayName}
-            <span className="ml-1.5 font-normal text-neutral-500">@{active.githubLogin}</span>
+            <span className="ml-1.5 font-normal text-neutral-500">@{active.login}</span>
           </p>
           <p className="truncate text-xs text-neutral-500">
             <Email value={active.gitEmail} />

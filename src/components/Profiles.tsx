@@ -13,22 +13,26 @@ import {
 } from "@phosphor-icons/react";
 import type { StoredProfile } from "../services/tauri";
 import ActiveProfile from "./ActiveProfile";
+import { ProviderIcon } from "./ProviderIcon";
 import Email from "./Email";
 import EditProfileModal from "./EditProfileModal";
 
 type ProfilesProps = {
   profiles: StoredProfile[];
-  /** Ids of profiles whose key is missing or no longer accepted by GitHub. */
+  /** Ids of profiles whose key is missing or no longer accepted by the provider. */
   broken: Set<string>;
   /** First DB read still in flight — suppresses the empty-state flash. */
   loading: boolean;
+  /** The single fully-active profile (owns the global git commit identity). */
   activeId: string | null;
+  /** Profiles whose provider host block currently points at their key. */
+  partialIds: Set<string>;
   onAdd: () => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onRefresh: (id: string) => Promise<void>;
   onUpdate: (id: string, name: string, email: string) => Promise<void>;
-  onOpenGitHub: () => void;
+  onOpenProfile: () => void;
 };
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -46,6 +50,7 @@ export default function Profiles({
   broken,
   loading,
   activeId,
+  partialIds,
   onAdd,
   onSelect,
   onDelete,
@@ -190,16 +195,30 @@ export default function Profiles({
 
                   {/* Profile Info */}
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-1.5 truncate">
+                    <div className="flex items-center gap-1.5 truncate">
                       <span className="text-sm font-semibold text-neutral-100">
                         {p.displayName}
                       </span>
                       <span className="text-xs text-neutral-500">
-                        @{p.githubLogin}
+                        @{p.login}
                       </span>
+                      <span
+                        title={p.providerName}
+                        className="inline-flex items-center gap-1 text-neutral-500"
+                      >
+                        <ProviderIcon kind={p.providerKind} size={11} />
+                      </span>
+                      {partialIds.has(p.id) && (
+                        <span
+                          title={`Its key is wired into ~/.ssh/config for ${p.providerHost}, so ${p.providerName} auth uses it — but another profile owns your git commit identity.`}
+                          className="rounded-xl bg-primary-400/10 px-1.5 py-0.5 text-[10px] font-medium text-primary-300/90"
+                        >
+                          SSH active
+                        </span>
+                      )}
                       {broken.has(p.id) && (
                         <span
-                          title="This account's SSH key is missing or no longer accepted by GitHub. Re-add or regenerate the key."
+                          title={`This account's SSH key is missing or no longer accepted by ${p.providerName}. Re-add or regenerate the key.`}
                           className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-medium text-rose-300"
                         >
                           won't work
