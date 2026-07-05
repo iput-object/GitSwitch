@@ -266,7 +266,7 @@ export default function AddProfile({
           onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
           className={[
-            "flex min-h-12 items-center gap-1.5 rounded-full border pl-5 pr-1.5 transition-all duration-200",
+            "flex min-h-12 items-center gap-1.5 rounded-3xl border pl-5 pr-1.5 transition-all duration-200",
             focused && !dragging ? "border-primary-400/60 bg-white/[0.07] ring-4 ring-primary-400/10" : "",
             dragging ? "border-dashed border-primary-400/50 bg-primary-400/5 ring-4 ring-primary-400/10" : "",
             !focused && !dragging ? "border-white/10 bg-white/5" : "",
