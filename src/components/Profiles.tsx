@@ -10,6 +10,7 @@ import {
   Trash,
   UserCircle,
   PencilSimple,
+  Terminal,
 } from "@phosphor-icons/react";
 import type { StoredProfile } from "../services/tauri";
 import ActiveProfile from "./ActiveProfile";
@@ -29,6 +30,8 @@ type ProfilesProps = {
   partialIds: Set<string>;
   onAdd: () => void;
   onSelect: (id: string) => void;
+  /** Wire only the provider's SSH host block to this profile (no global identity). */
+  onSelectPartial: (id: string) => void;
   onDelete: (id: string) => void;
   onRefresh: (id: string) => Promise<void>;
   onUpdate: (id: string, name: string, email: string) => Promise<void>;
@@ -53,6 +56,7 @@ export default function Profiles({
   partialIds,
   onAdd,
   onSelect,
+  onSelectPartial,
   onDelete,
   onRefresh,
   onUpdate,
@@ -111,6 +115,14 @@ export default function Profiles({
 
   const activeProfile = profiles.find((p) => p.id === activeId);
   const otherProfiles = profiles.filter((p) => p.id !== activeId);
+
+  // The provider owned by the fully-active profile. "Switch SSH only" is hidden
+  // for profiles on this provider (it's already fully active, so an SSH-only
+  // switch within it makes no sense) and for a profile that is already the
+  // SSH-active one (nothing to switch). For any other profile — including a
+  // sibling on a provider that's merely SSH-active by someone else — the option
+  // stays, and choosing it moves that provider's SSH block to this profile.
+  const activeFullProviderId = activeProfile?.providerId ?? null;
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
@@ -296,6 +308,21 @@ export default function Profiles({
                               className="absolute right-0 top-full z-20 mt-1 w-36 rounded-lg border border-white/8
                                           bg-neutral-900 py-1 shadow-xl shadow-black/40"
                             >
+                              {activeFullProviderId !== p.providerId &&
+                                !partialIds.has(p.id) && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMenuOpenId(null);
+                                    onSelectPartial(p.id);
+                                  }}
+                                  className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-neutral-300
+                                             transition-colors hover:bg-white/6"
+                                >
+                                  <Terminal size={13} weight="bold" />
+                                  Switch SSH only
+                                </button>
+                              )}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();

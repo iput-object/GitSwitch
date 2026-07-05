@@ -50,7 +50,6 @@ fn main() {
             ssh::keys::generate_ssh_key,
             ssh::keys::commit_key,
             ssh::open_ssh_folder,
-            ssh::identify::check_profile,
             provider::sync_provider,
             database::providers::list_providers,
             database::providers::add_provider,
@@ -62,6 +61,7 @@ fn main() {
             database::active::get_active_state,
             database::active::reconcile_active,
             database::active::activate_profile,
+            database::active::activate_partial,
             database::profiles::update_profile_details,
         ])
         .run(tauri::generate_context!())

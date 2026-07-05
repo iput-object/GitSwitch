@@ -1,6 +1,5 @@
 use crate::paths::{command, null_device};
 use crate::provider::{self, ProviderKind};
-use crate::ssh::fs::expand_path;
 use std::path::Path;
 
 /// Ask a provider who this key belongs to. `ssh -T git@<host>` exits non-zero
@@ -46,25 +45,4 @@ pub fn ssh_identify(host: &str, kind: ProviderKind, key_path: &Path) -> Result<S
         ));
     }
     Err(format!("Could not verify the key with {host}.\n{}", text.trim()))
-}
-
-/// Health-check a saved profile's key. Network call (a few seconds) — call it
-/// off the startup load path, never inline. Returns:
-///   "ok"      — key file is present and authenticates with the provider as `login`.
-///   "broken"  — file is gone, the provider rejected the key, or it now belongs
-///               to a different account. The profile will not work as-is.
-///   "unknown" — could not reach the provider. Don't flag the profile on this alone.
-// `(async)` runs this off the main thread (ssh round trip to the provider).
-#[tauri::command(async)]
-pub fn check_profile(host: String, kind: String, key_path: String, login: String) -> &'static str {
-    let path = expand_path(&key_path);
-    if !path.exists() {
-        return "broken";
-    }
-    match ssh_identify(&host, ProviderKind::parse(&kind), &path) {
-        Ok(who) if who.eq_ignore_ascii_case(login.trim()) => "ok",
-        Ok(_) => "broken",                                          // wrong account
-        Err(e) if e.contains("did not recognize this key") => "broken", // removed
-        Err(_) => "unknown",                                       // network/other
-    }
 }

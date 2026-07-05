@@ -92,31 +92,31 @@ export type GeneratedKey = { keyPath: string; publicKey: string };
 
 export type HostInfo = { username: string; avatar: string | null };
 
-/** Result of a profile health check: see `ssh::check_profile`. */
-export type ProfileHealth = "ok" | "broken" | "unknown";
-
 // ── Command bridge ───────────────────────────────────────────────────────────
 
 export const api = {
   // Providers
   listProviders: () => invoke<Provider[]>("list_providers"),
-  addProvider: (provider: NewProvider) => invoke<Provider>("add_provider", { provider }),
+  addProvider: (provider: NewProvider) =>
+    invoke<Provider>("add_provider", { provider }),
 
   // Profiles
   listProfiles: () => invoke<StoredProfile[]>("list_profiles"),
-  addProfile: (profile: NewProfile) => invoke<StoredProfile>("add_profile", { profile }),
-  refreshProfile: (id: string) => invoke<StoredProfile>("refresh_profile", { id }),
+  addProfile: (profile: NewProfile) =>
+    invoke<StoredProfile>("add_profile", { profile }),
+  refreshProfile: (id: string) =>
+    invoke<StoredProfile>("refresh_profile", { id }),
   deleteProfile: (id: string) => invoke<void>("delete_profile", { id }),
   deleteAllProfiles: () => invoke<void>("delete_all_profiles"),
   updateProfileDetails: (id: string, displayName: string, gitEmail: string) =>
     invoke<void>("update_profile_details", { id, displayName, gitEmail }),
-  checkProfile: (host: string, kind: string, keyPath: string, login: string) =>
-    invoke<ProfileHealth>("check_profile", { host, kind, keyPath, login }),
 
   // Active identity
   reconcileActive: () => invoke<ActiveState>("reconcile_active"),
   getActiveState: () => invoke<ActiveState>("get_active_state"),
   activateProfile: (id: string) => invoke<void>("activate_profile", { id }),
+  activateProfilePartial: (id: string) =>
+    invoke<void>("activate_partial", { id }),
 
   // SSH / provider sync
   generateSshKey: () => invoke<GeneratedKey>("generate_ssh_key"),

@@ -165,6 +165,15 @@ function App() {
       .catch(() => {});
   }
 
+  // Wire this profile's key into its provider's SSH host block only — pushes/
+  // pulls to that provider authenticate as it, but the global commit identity
+  // is left untouched. Surfaces as the "SSH active" badge.
+  function handleSelectPartial(id: string) {
+    api.activateProfilePartial(id)
+      .then(refreshActiveState)
+      .catch(() => {});
+  }
+
   function handleDelete(id: string) {
     if (id === activeId) return;
     setProfiles((prev) => prev.filter((p) => p.id !== id));
@@ -360,6 +369,7 @@ function App() {
               partialIds={partialIds}
               onAdd={() => openAdd()}
               onSelect={handleSelect}
+              onSelectPartial={handleSelectPartial}
               onDelete={handleDelete}
               onRefresh={handleRefresh}
               onUpdate={handleUpdateProfile}

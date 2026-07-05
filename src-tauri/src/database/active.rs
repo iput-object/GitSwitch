@@ -81,6 +81,35 @@ pub fn activate_profile(app: AppHandle, id: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Wire a profile's key into its provider's SSH host block WITHOUT taking over
+/// the global git commit identity. This makes `git push/pull` to that provider
+/// authenticate as this profile ("SSH active"), while another profile keeps
+/// owning `user.name`/`user.email`/the signing key.
+pub fn activate_partial_inner(app: &AppHandle, id: &str) -> Result<(), String> {
+    let conn = open(app)?;
+    let (key_path, provider_id, host): (String, String, String) = conn
+        .query_row(
+            &format!(
+                "SELECT pr.key_path, pr.provider_id, pv.host
+                 {FROM_PROFILES} WHERE pr.id = ?1"
+            ),
+            params![id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .map_err(|e| format!("Profile not found: {e}"))?;
+
+    crate::ssh::config::apply_ssh_config(&host, &key_path)?;
+    set_partial_active(&conn, &provider_id, id)?;
+    Ok(())
+}
+
+#[tauri::command(async)]
+pub fn activate_partial(app: AppHandle, id: String) -> Result<(), String> {
+    activate_partial_inner(&app, &id)?;
+    crate::tray::rebuild(&app);
+    Ok(())
+}
+
 fn find_by_email(conn: &Connection, email: Option<&str>) -> Option<String> {
     let email = email?;
     conn.query_row(
