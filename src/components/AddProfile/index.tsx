@@ -4,8 +4,10 @@ import { ArrowsClockwise, CircleNotch, Key, WarningCircle } from "@phosphor-icon
 import { api, type StoredProfile, type GeneratedKey, type ProviderAccount, type Provider } from "../../services/tauri";
 
 import ConfirmStage from "./ConfirmStage";
-import ProviderPicker from "./ProviderPicker";
+import SelectProviderStage from "./SelectProviderStage";
 import GeneratedKeyPanel from "./GeneratedKeyPanel";
+import { ProviderIcon } from "../ProviderIcon";
+import { CaretLeft } from "@phosphor-icons/react";
 
 type AddProfileProps = {
   initialInput?: string;
@@ -53,7 +55,7 @@ export default function AddProfile({
   const [account, setAccount] = useState<ProviderAccount | null>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [selectedProviderId, setSelectedProviderId] = useState<string>("github");
-  const [isCustom, setIsCustom] = useState(false);
+  const [step, setStep] = useState<"select" | "connect">("select");
   const [email, setEmail] = useState("");
 
   const [generating, setGenerating] = useState(false);
@@ -199,7 +201,23 @@ export default function AddProfile({
     );
   }
 
+  if (step === "select") {
+    return (
+      <SelectProviderStage
+        providers={providers}
+        onSelect={(id) => {
+          setSelectedProviderId(id);
+          setStep("connect");
+        }}
+        onAddCustomProvider={(p) => setProviders((prev) => [...prev, p])}
+        onError={setError}
+        onCancel={showCancel ? onCancel : undefined}
+      />
+    );
+  }
+
   const status = STATUS[kind];
+  const activeProvider = providers.find(p => p.id === selectedProviderId);
 
   return (
     <motion.div
@@ -208,35 +226,35 @@ export default function AddProfile({
       animate="show"
       className="relative flex-1 flex flex-col items-center justify-center px-8 text-center"
     >
+      <button 
+        onClick={() => setStep("select")}
+        className="absolute top-6 left-6 p-1.5 rounded-md text-neutral-400 hover:text-white hover:bg-white/10 transition-colors z-10"
+      >
+        <CaretLeft size={18} weight="bold" />
+      </button>
+
+      <motion.div variants={item} className="w-full flex justify-center mb-6">
+        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-neutral-200">
+          <ProviderIcon kind={activeProvider?.kind || 'github'} size={14} />
+          <span className="text-sm font-medium">
+            {activeProvider?.name || 'GitHub'}
+          </span>
+        </div>
+      </motion.div>
+
       <motion.h1
         variants={item}
         className="relative text-2xl font-semibold text-neutral-50"
       >
-        Connect a {providers.find(p => p.id === selectedProviderId)?.name || 'GitHub'} account
+        Connect your account
       </motion.h1>
       <motion.p
         variants={item}
-        className="relative mt-2 max-w-[320px] text-sm leading-relaxed text-neutral-400"
+        className="relative mt-2 mb-8 max-w-[320px] text-sm leading-relaxed text-neutral-400"
       >
         Point GitSwitch at an SSH key, or create a new one. Your name and avatar
-        come straight from {providers.find(p => p.id === selectedProviderId)?.name || 'GitHub'}.
+        come straight from {activeProvider?.name || 'GitHub'}.
       </motion.p>
-
-      <motion.div variants={item} className="w-full">
-        <ProviderPicker
-          providers={providers}
-          selectedProviderId={selectedProviderId}
-          setSelectedProviderId={setSelectedProviderId}
-          isCustom={isCustom}
-          setIsCustom={setIsCustom}
-          onAddCustomProvider={(p) => {
-            setProviders(prev => [...prev, p]);
-            setSelectedProviderId(p.id);
-            setIsCustom(false);
-          }}
-          onError={setError}
-        />
-      </motion.div>
 
       <motion.div variants={item} className="w-full max-w-85 text-left">
         <div
@@ -309,7 +327,7 @@ export default function AddProfile({
         </div>
       </motion.div>
 
-      <GeneratedKeyPanel generated={generated} reduce={reduce || false} />
+      <GeneratedKeyPanel generated={generated} provider={activeProvider} reduce={reduce || false} />
 
       <motion.button
         variants={item}
@@ -342,16 +360,6 @@ export default function AddProfile({
         <p className="relative mt-2.5 max-w-85 text-xs leading-relaxed text-rose-300/90">
           {error}
         </p>
-      )}
-
-      {showCancel && (
-        <motion.button
-          variants={item}
-          onClick={onCancel}
-          className="relative mt-3 text-xs font-medium text-neutral-400 transition-colors hover:text-neutral-200"
-        >
-          Cancel
-        </motion.button>
       )}
     </motion.div>
   );

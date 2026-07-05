@@ -220,30 +220,16 @@ export default function Profiles({
                       >
                         <ProviderIcon kind={p.providerKind} size={11} />
                       </span>
-                      {partialIds.has(p.id) && (
-                        <span
-                          title={`Its key is wired into ~/.ssh/config for ${p.providerHost}, so ${p.providerName} auth uses it — but another profile owns your git commit identity.`}
-                          className="rounded-xl bg-primary-400/10 px-1.5 py-0.5 text-[10px] font-medium text-primary-300/90"
-                        >
-                          SSH active
-                        </span>
-                      )}
-                      {broken.has(p.id) && (
-                        <span
-                          title={`This account's SSH key is missing or no longer accepted by ${p.providerName}. Re-add or regenerate the key.`}
-                          className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-medium text-rose-300"
-                        >
-                          won't work
-                        </span>
-                      )}
                     </div>
                     <div className="truncate text-[11px] text-neutral-500">
                       <Email value={p.gitEmail} />
                     </div>
                   </div>
 
-                  {/* Confirm delete state */}
-                  {isConfirming ? (
+                  {/* Badges & Actions */}
+                  <div className="flex items-center gap-2">
+                    {/* Confirm delete state */}
+                    {isConfirming ? (
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-rose-300">Delete?</span>
                       <button
@@ -261,9 +247,27 @@ export default function Profiles({
                         Cancel
                       </button>
                     </div>
-                  ) : (
-                    <>
-                      {/* Switching to a broken profile won't work — offer to
+                    ) : (
+                      <>
+                        {/* Status Badges */}
+                        {partialIds.has(p.id) && (
+                          <span
+                            title={`Its key is wired into ~/.ssh/config for ${p.providerHost}, so ${p.providerName} auth uses it — but another profile owns your git commit identity.`}
+                            className="rounded-xl bg-primary-400/10 px-2 py-0.5 text-[10px] font-medium text-primary-300/90"
+                          >
+                            SSH active
+                          </span>
+                        )}
+                        {broken.has(p.id) && (
+                          <span
+                            title={`This account's SSH key is missing or no longer accepted by ${p.providerName}. Re-add or regenerate the key.`}
+                            className="rounded-xl bg-rose-500/15 px-2 py-0.5 text-[10px] font-medium text-rose-300"
+                          >
+                            won't work
+                          </span>
+                        )}
+
+                        {/* Switching to a broken profile won't work — offer to
                           delete it instead, in the Switch button's place. */}
                       {broken.has(p.id) ? (
                         <button
@@ -373,6 +377,7 @@ export default function Profiles({
                       </div>
                     </>
                   )}
+                  </div>
                 </motion.div>
               );
             })}
