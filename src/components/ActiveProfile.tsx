@@ -69,8 +69,8 @@ export default function ActiveProfile({
         <div className="rounded-xl border border-primary-400/20 bg-white/2 p-5">
           <div className="flex gap-5">
             {/* Avatar */}
-            <div className="relative">
-              <div className="h-16 w-16 rounded-full bg-neutral-800 ring-2 ring-white/10 overflow-hidden">
+            <div className="relative h-16 w-16 shrink-0">
+              <div className="h-full w-full rounded-full bg-neutral-800 ring-2 ring-white/10 overflow-hidden">
                 {profile.avatar ? (
                   <img
                     src={profile.avatar}
@@ -83,6 +83,12 @@ export default function ActiveProfile({
                   </div>
                 )}
               </div>
+              <div 
+                title={profile.providerName}
+                className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-neutral-950 ring-2 ring-neutral-950"
+              >
+                <ProviderIcon kind={profile.providerKind} size={14} />
+              </div>
             </div>
 
             {/* Info */}
@@ -91,7 +97,6 @@ export default function ActiveProfile({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-semibold text-neutral-50 flex items-center gap-2">
-                      <ProviderIcon kind={profile.providerKind} size={18} className="text-neutral-400" />
                       {profile.displayName}
                     </span>
                     <span className="px-2 py-0.5 text-[10px] font-semibold tracking-wide text-neutral-500">

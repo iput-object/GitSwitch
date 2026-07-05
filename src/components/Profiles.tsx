@@ -191,18 +191,26 @@ export default function Profiles({
                            }`}
                 >
                   {/* Avatar */}
-                  <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-neutral-800 ring-1 ring-white/10">
-                    {p.avatar ? (
-                      <img
-                        src={p.avatar}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-primary-300">
-                        {p.displayName.slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
+                  <div className="relative h-10 w-10 shrink-0">
+                    <div className="h-full w-full overflow-hidden rounded-full bg-neutral-800 ring-1 ring-white/10">
+                      {p.avatar ? (
+                        <img
+                          src={p.avatar}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-primary-300">
+                          {p.displayName.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div 
+                      title={p.providerName}
+                      className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-neutral-950 ring-[1.5px] ring-neutral-950"
+                    >
+                      <ProviderIcon kind={p.providerKind} size={10} />
+                    </div>
                   </div>
 
                   {/* Profile Info */}
@@ -213,12 +221,6 @@ export default function Profiles({
                       </span>
                       <span className="text-xs text-neutral-500">
                         @{p.login}
-                      </span>
-                      <span
-                        title={p.providerName}
-                        className="inline-flex items-center gap-1 text-neutral-500"
-                      >
-                        <ProviderIcon kind={p.providerKind} size={11} />
                       </span>
                     </div>
                     <div className="truncate text-[11px] text-neutral-500">
