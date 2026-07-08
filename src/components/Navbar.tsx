@@ -108,14 +108,14 @@ export default function Navbar({
               >
                 {hasNotification ? (
                   <div className="text-left">
-                    <div className="text-xs font-medium text-neutral-100">
-                      In use, not added yet
+                    <div className="text-[10px] font-semibold uppercase text-white/70">
+                      {notification.providerId} key in use
                     </div>
                     <div className="mt-0.5 truncate text-xs text-neutral-400">
-                      {notification?.login
+                      {notification.login
                         ? `@${notification.login}`
-                        : <Email value={notification?.email ?? ""} />}{" "}
-                      is your current identity.
+                        : <Email value={notification.email ?? ""} />}{" "}
+                      is not added yet.
                     </div>
                     <button
                       onClick={() => {
