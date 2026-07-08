@@ -15,6 +15,20 @@
   --color-brand-500: #06b6d4; /* cyan-500 */
 }
 
+body {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea, .select-text {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.3);
+}
+
 /* Custom scrollbar for webkit browsers */
 ::-webkit-scrollbar {
   width: 6px;

@@ -30,7 +30,7 @@ export default function GitConfig({ onClose }: { onClose: () => void }) {
             <X size={16} weight="bold" />
           </button>
         </div>
-        <pre className="overflow-auto px-4 py-3 text-xs leading-relaxed text-neutral-300 whitespace-pre-wrap break-all">
+        <pre className="overflow-auto px-4 py-3 text-xs leading-relaxed text-neutral-300 whitespace-pre-wrap break-all select-text">
           {config ?? "Loading…"}
         </pre>
       </div>

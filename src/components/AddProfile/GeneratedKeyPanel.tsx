@@ -54,7 +54,7 @@ export default function GeneratedKeyPanel({ generated, provider, reduce }: Gener
               {copied ? "Copied" : "Copy"}
             </button>
           </div>
-          <p className="max-h-12 overflow-y-auto break-all font-mono text-[11px] leading-relaxed text-neutral-400">
+          <p className="max-h-12 overflow-y-auto break-all font-mono text-[11px] leading-relaxed text-neutral-400 select-text">
             {generated.publicKey}
           </p>
           <div className="mt-3 flex items-center gap-1 pt-1">
