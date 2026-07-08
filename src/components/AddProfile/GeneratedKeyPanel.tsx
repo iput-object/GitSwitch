@@ -13,6 +13,12 @@ type GeneratedKeyPanelProps = {
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
+const PROVIDER_SSH_PATHS: Record<string, string> = {
+  github: "/settings/ssh/new",
+  gitlab: "/-/user_settings/ssh_keys",
+  bitbucket: "/account/settings/ssh-keys/",
+};
+
 export default function GeneratedKeyPanel({ generated, provider, reduce }: GeneratedKeyPanelProps) {
   const [copied, setCopied] = useState(false);
 
@@ -62,10 +68,9 @@ export default function GeneratedKeyPanel({ generated, provider, reduce }: Gener
             <button
               onClick={() => {
                 const host = provider?.host || "github.com";
-                let url = `https://${host}/settings/ssh/new`;
-                if (provider?.kind === "gitlab") url = `https://${host}/-/profile/keys`;
-                else if (provider?.kind === "bitbucket") url = `https://${host}/account/settings/ssh-keys/`;
-
+                const kind = provider?.kind || "github";
+                
+                const url = `https://${host}${PROVIDER_SSH_PATHS[kind] || PROVIDER_SSH_PATHS.github}`;
                 openUrl(url).catch(() => {});
               }}
               className="text-xs font-medium text-primary-300 hover:text-primary-200 underline underline-offset-2 transition-colors cursor-pointer"
