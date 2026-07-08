@@ -106,6 +106,10 @@ export const api = {
     invoke<StoredProfile>("add_profile", { profile }),
   refreshProfile: (id: string) =>
     invoke<StoredProfile>("refresh_profile", { id }),
+  getProfileDefaults: (id: string) =>
+    invoke<{ display_name: string; git_email: string }>("get_profile_defaults", { id }),
+  resetProfileDefaults: (id: string) =>
+    invoke<StoredProfile>("reset_profile_defaults", { id }),
   deleteProfile: (id: string) => invoke<void>("delete_profile", { id }),
   deleteAllProfiles: () => invoke<void>("delete_all_profiles"),
   updateProfileDetails: (id: string, displayName: string, gitEmail: string) =>

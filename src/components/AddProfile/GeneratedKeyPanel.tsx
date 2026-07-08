@@ -3,7 +3,6 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { AnimatePresence, motion } from "motion/react";
 import { Check, Copy } from "@phosphor-icons/react";
 import type { GeneratedKey, Provider } from "../../services/tauri";
-import { ProviderIcon } from "../ProviderIcon";
 
 type GeneratedKeyPanelProps = {
   generated: GeneratedKey | null;

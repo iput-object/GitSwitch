@@ -4,6 +4,7 @@ use crate::database::core::{
     SELECT_COLS,
 };
 use crate::models::{NewProfile, StoredProfile};
+use serde::Serialize;
 use crate::provider;
 use crate::utils::{data_uri, download_avatar, now_nanos};
 use rusqlite::{params, OptionalExtension};
@@ -140,17 +141,13 @@ pub fn refresh_profile(app: AppHandle, id: String) -> Result<StoredProfile, Stri
     let prov = provider::load(&conn, &provider_id)?;
 
     let overview = provider::overview(&prov, &login);
-    let title = overview.name.unwrap_or_else(|| login.clone());
     let avatar = overview.avatar_url.as_deref().and_then(download_avatar);
 
     conn.execute(
         "UPDATE profiles
-         SET display_name = ?1, git_name = ?2,
-             public_repos = ?3, followers = ?4, commits = ?5
-         WHERE id = ?6",
+         SET public_repos = ?1, followers = ?2, commits = ?3
+         WHERE id = ?4",
         params![
-            title,
-            title,
             overview.public_repos,
             overview.followers,
             overview.commits,
@@ -192,4 +189,65 @@ pub fn update_profile_details(
 
     crate::tray::rebuild(&app);
     Ok(())
+}
+
+#[derive(Serialize)]
+pub struct ProfileDefaults {
+    pub display_name: String,
+    pub git_email: String,
+}
+
+#[tauri::command(async)]
+pub fn get_profile_defaults(app: AppHandle, id: String) -> Result<ProfileDefaults, String> {
+    let conn = open(&app)?;
+    let (login, provider_id): (String, String) = conn
+        .query_row(
+            "SELECT login, provider_id FROM profiles WHERE id = ?1",
+            params![id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .map_err(|e| format!("Profile not found: {e}"))?;
+    let prov = provider::load(&conn, &provider_id)?;
+
+    let account = provider::api::fetch_account(&prov, &login);
+    let title = account.name.unwrap_or_else(|| login.clone());
+    let kind = crate::provider::ProviderKind::parse(&prov.kind);
+    let email = account.email.or_else(|| crate::provider::suggested_email(kind, &login, account.id)).unwrap_or_default();
+
+    Ok(ProfileDefaults {
+        display_name: title,
+        git_email: email,
+    })
+}
+
+#[tauri::command(async)]
+pub fn reset_profile_defaults(app: AppHandle, id: String) -> Result<StoredProfile, String> {
+    let conn = open(&app)?;
+    let (login, provider_id): (String, String) = conn
+        .query_row(
+            "SELECT login, provider_id FROM profiles WHERE id = ?1",
+            params![id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .map_err(|e| format!("Profile not found: {e}"))?;
+    let prov = provider::load(&conn, &provider_id)?;
+
+    let account = provider::api::fetch_account(&prov, &login);
+    let title = account.name.unwrap_or_else(|| login.clone());
+    let kind = crate::provider::ProviderKind::parse(&prov.kind);
+    let email = account.email.or_else(|| crate::provider::suggested_email(kind, &login, account.id)).unwrap_or_default();
+
+    conn.execute(
+        "UPDATE profiles SET display_name = ?1, git_name = ?1, git_email = ?2 WHERE id = ?3",
+        params![title, email, id],
+    )
+    .map_err(|e| format!("Could not update profile: {e}"))?;
+
+    if read_setting(&conn, ACTIVE_KEY).as_deref() == Some(&id) {
+        let _ = activate(&app, &id);
+    }
+
+    let updated = read_one(&conn, &id)?;
+    crate::tray::rebuild(&app);
+    Ok(updated)
 }
