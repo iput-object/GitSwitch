@@ -5,7 +5,6 @@ use crate::provider::ProviderKind;
 /// GitHub fills the stats; others leave them `None`.
 #[derive(Default)]
 pub struct Overview {
-    pub name: Option<String>,
     pub avatar_url: Option<String>,
     pub public_repos: Option<i64>,
     pub followers: Option<i64>,
@@ -136,7 +135,6 @@ pub fn overview(provider: &Provider, login: &str) -> Overview {
         _ => None,
     };
     Overview {
-        name: account.name,
         avatar_url: account.avatar_url,
         public_repos: account.public_repos.map(|v| v as i64),
         followers: account.followers.map(|v| v as i64),
