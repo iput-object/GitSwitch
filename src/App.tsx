@@ -185,17 +185,7 @@ function App() {
     setProfiles((prev) => prev.map((p) => (p.id === id ? updated : p)));
   }
 
-  async function handleResetDefaults(id: string) {
-    try {
-      const updated = await api.resetProfileDefaults(id);
-      setProfiles((prev) => prev.map((p) => (p.id === id ? updated : p)));
-      if (id === activeId) {
-        refreshActiveState(); // refresh in case git config changed
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
+
 
   async function handleRefreshAll() {
     if (refreshingAllRef.current) return; // ignore re-trigger while in flight
@@ -384,9 +374,7 @@ function App() {
               onSelectPartial={handleSelectPartial}
               onDelete={handleDelete}
               onRefresh={handleRefresh}
-              onResetDefaults={handleResetDefaults}
               onUpdate={handleUpdateProfile}
-              onOpenProfile={handleOpenProfile}
             />
           )}
 

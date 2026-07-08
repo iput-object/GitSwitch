@@ -34,9 +34,7 @@ type ProfilesProps = {
   onSelectPartial: (id: string) => void;
   onDelete: (id: string) => void;
   onRefresh: (id: string) => Promise<void>;
-  onResetDefaults: (id: string) => Promise<void>;
   onUpdate: (id: string, name: string, email: string) => Promise<void>;
-  onOpenProfile: () => void;
 };
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -60,7 +58,6 @@ export default function Profiles({
   onSelectPartial,
   onDelete,
   onRefresh,
-  onResetDefaults,
   onUpdate,
 }: ProfilesProps) {
   const reduce = useReducedMotion();
@@ -130,7 +127,7 @@ export default function Profiles({
     <div className="flex-1 flex flex-col min-h-0 relative">
       <div className="px-6 pt-5 pb-4 shrink-0 border-b border-white/6 z-10 bg-transparent backdrop-blur-md">
         {/* ── Active Profile ────────────────────────────────────── */}
-        <ActiveProfile profile={activeProfile} onUpdate={onUpdate} onResetDefaults={onResetDefaults} />
+        <ActiveProfile profile={activeProfile} onUpdate={onUpdate} />
       </div>
 
       <div
@@ -414,7 +411,6 @@ export default function Profiles({
           <EditProfileModal
             profile={editingProfile}
             onUpdate={onUpdate}
-            onResetDefaults={onResetDefaults}
             onClose={() => setEditingProfile(null)}
           />
         )}

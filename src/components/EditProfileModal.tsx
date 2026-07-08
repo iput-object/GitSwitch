@@ -8,12 +8,11 @@ import { api } from "../services/tauri";
 export default function EditProfileModal({
   profile,
   onUpdate,
-  onResetDefaults,
   onClose,
 }: {
   profile: StoredProfile;
   onUpdate: (id: string, name: string, email: string) => Promise<void>;
-  onResetDefaults: (id: string) => Promise<void>;
+
   onClose: () => void;
 }) {
   const [name, setName] = useState(profile.displayName);

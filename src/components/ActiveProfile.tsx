@@ -14,7 +14,6 @@ import EditProfileModal from "./EditProfileModal";
 type ActiveProfileProps = {
   profile: StoredProfile | undefined;
   onUpdate: (id: string, name: string, email: string) => Promise<void>;
-  onResetDefaults: (id: string) => Promise<void>;
 };
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -34,7 +33,6 @@ const item: Variants = {
 export default function ActiveProfile({
   profile,
   onUpdate,
-  onResetDefaults,
 }: ActiveProfileProps) {
   const reduce = useReducedMotion();
   const [editing, setEditing] = useState(false);
@@ -156,7 +154,6 @@ export default function ActiveProfile({
           <EditProfileModal
             profile={profile}
             onUpdate={onUpdate}
-            onResetDefaults={onResetDefaults}
             onClose={() => setEditing(false)}
           />
         )}
