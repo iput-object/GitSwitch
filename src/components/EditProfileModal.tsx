@@ -41,7 +41,7 @@ export default function EditProfileModal({
         exit={{ opacity: 0, scale: 0.95 }}
         className="relative w-full max-w-sm rounded-2xl border border-white/10 bg-neutral-900 p-5 shadow-2xl"
       >
-        <h2 className="mb-4 text-lg font-semibold text-white">Edit Profile</h2>
+        <h2 data-tauri-drag-region className="mb-4 text-lg font-semibold text-white pointer-events-none">Edit Profile</h2>
         <div className="flex flex-col gap-3">
           <div>
             <label className="mb-1.5 block text-xs font-medium text-neutral-400">

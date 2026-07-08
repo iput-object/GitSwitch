@@ -38,6 +38,7 @@ export default function SelectProviderStage({
 
   return (
     <motion.div
+      data-tauri-drag-region
       variants={container}
       initial={reduce ? false : "hidden"}
       animate="show"
@@ -121,8 +122,8 @@ export default function SelectProviderStage({
               exit={{ opacity: 0, scale: 0.95 }}
               className="relative w-full max-w-sm rounded-2xl border border-white/10 bg-neutral-900 p-5 shadow-2xl text-left"
             >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-white">
+              <div data-tauri-drag-region className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-white pointer-events-none">
                   Add Custom Provider
                 </h2>
                 <button

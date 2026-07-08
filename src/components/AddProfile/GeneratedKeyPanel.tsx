@@ -36,7 +36,7 @@ export default function GeneratedKeyPanel({ generated, provider, reduce }: Gener
           animate={{ opacity: 1, y: 0, height: "auto" }}
           exit={{ opacity: 0, y: -4, height: 0 }}
           transition={{ duration: 0.35, ease: EASE }}
-          className="relative my-3 w-full max-w-85 overflow-hidden rounded-xl border border-white/10 bg-white/3 p-3 text-left"
+          className="relative mb-3 w-full max-w-85 overflow-hidden rounded-xl border border-white/10 bg-white/3 p-3 text-left"
         >
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-medium text-neutral-300">
@@ -57,23 +57,21 @@ export default function GeneratedKeyPanel({ generated, provider, reduce }: Gener
           <p className="max-h-12 overflow-y-auto break-all font-mono text-[11px] leading-relaxed text-neutral-400">
             {generated.publicKey}
           </p>
-          <div className="mt-3">
-            <span className="block text-xs font-medium text-neutral-400 mb-2">Add it to your provider:</span>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  const host = provider?.host || "github.com";
-                  let url = `https://${host}/settings/ssh/new`;
-                  if (provider?.kind === "gitlab") url = `https://${host}/-/profile/keys`;
-                  else if (provider?.kind === "bitbucket") url = `https://${host}/account/settings/ssh-keys/`;
-                  
-                  openUrl(url).catch(() => {});
-                }}
-                className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:bg-white/10 hover:text-neutral-100"
-              >
-                <ProviderIcon kind={provider?.kind || "github"} size={14} /> {provider?.name || "GitHub"}
-              </button>
-            </div>
+          <div className="mt-3 flex items-center gap-1 pt-1">
+            <span className="text-xs font-medium text-neutral-400">Add it to your provider:</span>
+            <button
+              onClick={() => {
+                const host = provider?.host || "github.com";
+                let url = `https://${host}/settings/ssh/new`;
+                if (provider?.kind === "gitlab") url = `https://${host}/-/profile/keys`;
+                else if (provider?.kind === "bitbucket") url = `https://${host}/account/settings/ssh-keys/`;
+
+                openUrl(url).catch(() => {});
+              }}
+              className="text-xs font-medium text-primary-300 hover:text-primary-200 underline underline-offset-2 transition-colors cursor-pointer"
+            >
+              click here
+            </button>
           </div>
         </motion.div>
       )}

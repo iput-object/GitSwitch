@@ -11,6 +11,17 @@ pub const SELECT_COLS: &str = "pr.id, pr.provider_id, pr.login, pr.display_name,
      pv.name, pv.host, pv.kind";
 pub const FROM_PROFILES: &str = "FROM profiles pr JOIN providers pv ON pv.id = pr.provider_id";
 
+/// Does `table` have a column named `column`? Used to drive schema migrations.
+fn has_column(conn: &Connection, table: &str, column: &str) -> bool {
+    conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info(?1) WHERE name = ?2",
+        params![table, column],
+        |r| r.get::<_, i64>(0),
+    )
+    .map(|n| n > 0)
+    .unwrap_or(false)
+}
+
 /// Seed the three built-in providers if they are not already present. Idempotent
 /// via INSERT OR IGNORE — safe on every open.
 fn seed_providers(conn: &Connection) -> Result<(), String> {
@@ -88,6 +99,32 @@ pub(crate) fn open(app: &AppHandle) -> Result<Connection, String> {
     .map_err(|e| format!("Could not init database: {e}"))?;
 
     seed_providers(&conn)?;
+
+    for column in ["public_repos", "followers", "commits"] {
+        if !has_column(&conn, "profiles", column) {
+            let _ = conn.execute(
+                &format!("ALTER TABLE profiles ADD COLUMN {column} INTEGER"),
+                [],
+            );
+        }
+    }
+
+    if !has_column(&conn, "profiles", "provider_id") {
+        let _ = conn.execute("ALTER TABLE profiles ADD COLUMN provider_id TEXT", []);
+        let _ = conn.execute(
+            "UPDATE profiles SET provider_id = 'github' WHERE provider_id IS NULL",
+            [],
+        );
+    }
+    if !has_column(&conn, "profiles", "login") {
+        if has_column(&conn, "profiles", "github_login") {
+            let _ = conn.execute("ALTER TABLE profiles RENAME COLUMN github_login TO login", []);
+        } else {
+            let _ = conn.execute("ALTER TABLE profiles ADD COLUMN login TEXT", []);
+        }
+    } else if has_column(&conn, "profiles", "github_login") {
+        let _ = conn.execute("ALTER TABLE profiles DROP COLUMN github_login", []);
+    }
 
     Ok(conn)
 }

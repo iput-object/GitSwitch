@@ -221,12 +221,13 @@ export default function AddProfile({
 
   return (
     <motion.div
+      data-tauri-drag-region
       variants={container}
       initial={reduce ? false : "hidden"}
       animate="show"
       className="relative flex-1 flex flex-col items-center justify-center px-8 text-center"
     >
-      <button 
+      <button
         onClick={() => setStep("select")}
         className="absolute top-6 left-6 p-1.5 rounded-md text-neutral-400 hover:text-white hover:bg-white/10 transition-colors z-10"
       >
@@ -306,16 +307,16 @@ export default function AddProfile({
           )}
         </div>
 
-        <div className="mt-1.5 h-4 px-1">
+        <div className="mt-3 px-1">
           <AnimatePresence mode="wait">
             {status && (
               <motion.div
                 key={kind}
-                initial={reduce ? false : { opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
+                initial={reduce ? false : { opacity: 0, height: 0, marginBottom: 0 }}
+                animate={{ opacity: 1, height: "auto", marginBottom: 12 }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                 transition={{ duration: 0.18 }}
-                className="flex items-center gap-1.5"
+                className="flex items-center gap-1.5 overflow-hidden"
               >
                 <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${status.dot}`} />
                 <span className={`text-xs ${status.accent ? "text-primary-300/80" : "text-neutral-500"}`}>

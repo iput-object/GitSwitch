@@ -90,7 +90,13 @@ pub fn commit_key(key_path: String, login: String) -> Result<String, String> {
     if !src.exists() {
         return Err("The key file is missing.".to_string());
     }
-    let dir = ssh_dir()?;
+    let ssh_base = ssh_dir()?;
+    let dir = ssh_base.join("gitswitch");
+    if !dir.exists() {
+        std::fs::create_dir_all(&dir).map_err(|e| format!("Could not create {:?}: {e}", dir))?;
+        set_mode(&dir, 0o700);
+    }
+    
     let safe: String = login
         .chars()
         .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_')
@@ -101,9 +107,9 @@ pub fn commit_key(key_path: String, login: String) -> Result<String, String> {
         safe
     };
 
-    let mut dest = dir.join(format!("gitswitch_{base}"));
+    let mut dest = dir.join(&base);
     if dest.exists() {
-        dest = dir.join(format!("gitswitch_{base}_{}", stamp()));
+        dest = dir.join(format!("{base}_{}", stamp()));
     }
 
     move_file(&src, &dest)?;

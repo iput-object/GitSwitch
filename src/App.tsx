@@ -354,8 +354,8 @@ function App() {
             <AddProfile
               initialInput={pendingInput}
               existingLogins={profiles.map((p) => `${p.login}@${p.providerId}`)}
-              showCancel={profiles.length > 0}
-              onCancel={() => setScreen("profiles")}
+              showCancel={true}
+              onCancel={() => setScreen(profiles.length > 0 ? "profiles" : "welcome")}
               onSave={handleSaveProfile}
             />
           )}

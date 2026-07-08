@@ -21,8 +21,8 @@ export default function GitConfig({ onClose }: { onClose: () => void }) {
         className="flex max-h-[70vh] w-full max-w-lg flex-col rounded-xl border border-white/8 bg-neutral-900 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-white/6 px-4 py-3">
-          <p className="text-sm font-medium text-neutral-200">Git Config</p>
+        <div data-tauri-drag-region className="flex items-center justify-between border-b border-white/6 px-4 py-3">
+          <p className="text-sm font-medium text-neutral-200 pointer-events-none">Git Config</p>
           <button
             onClick={onClose}
             className="text-neutral-500 transition-colors cursor-pointer hover:text-neutral-200"

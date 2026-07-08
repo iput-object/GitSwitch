@@ -36,6 +36,7 @@ export default function ConfirmStage({
   const name = account.name || account.login;
   return (
     <motion.div
+      data-tauri-drag-region
       variants={container}
       initial={reduce ? false : "hidden"}
       animate="show"

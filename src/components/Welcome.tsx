@@ -138,7 +138,7 @@ export default function Welcome({ onContinue }: WelcomeProps) {
               <ArrowRight
                 weight="bold"
                 size={15}
-                className="relative transition-transform group-hover:translate-x-0.5"
+                className="relative transition-transform group-hover:translate-x"
               />
             </>
           )}

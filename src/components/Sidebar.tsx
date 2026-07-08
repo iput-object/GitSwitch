@@ -86,7 +86,7 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="flex h-full w-56 flex-col border-r border-white/6 bg-white/2 px-3 py-4">
+    <aside data-tauri-drag-region className="flex h-full w-56 flex-col border-r border-white/6 bg-white/2 px-3 py-4">
       {/* Navigation */}
       <nav className="flex flex-col gap-0.5">
         {navItems.map((item) => {
