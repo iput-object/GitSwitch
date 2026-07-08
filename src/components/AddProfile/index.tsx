@@ -150,9 +150,16 @@ export default function AddProfile({
     setError(null);
     setSaving(true);
     try {
-      const keyPath = account.managed
-        ? await api.commitKey(account.keyPath, account.login)
-        : account.keyPath;
+      let finalKeyPath = account.keyPath;
+      if (account.managed) {
+        finalKeyPath = await api.commitKey(account.keyPath, account.login);
+        setAccount(prev => prev ? { ...prev, keyPath: finalKeyPath, managed: false } : null);
+        setInput(finalKeyPath);
+        if (generated) {
+          setGenerated({ ...generated, keyPath: finalKeyPath });
+        }
+      }
+
       const name = account.name || account.login;
       const stored = await api.addProfile({
         displayName: name,
@@ -161,7 +168,7 @@ export default function AddProfile({
         providerId: selectedProviderId,
         login: account.login,
         avatarUrl: account.avatarUrl,
-        keyPath,
+        keyPath: finalKeyPath,
         publicKey: account.publicKey,
       });
       onSave(stored);
