@@ -15,7 +15,17 @@ pub fn parse_login(kind: ProviderKind, text: &str) -> Option<String> {
     match kind {
         ProviderKind::Github => grab("Hi ", '!'),
         ProviderKind::Gitlab => grab("Welcome to GitLab, @", '!'),
-        ProviderKind::Bitbucket => grab("logged in as ", '.'),
+        ProviderKind::Bitbucket => grab("logged in as ", '.').or_else(|| {
+            if text.contains("authenticated via ssh key") {
+                let s = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
+                Some(format!("bitbucket-key-{s}"))
+            } else {
+                None
+            }
+        }),
     }
 }
 

@@ -145,7 +145,7 @@ export default function AddProfile({
     }
   }
 
-  async function handleSave() {
+  async function handleSave(editedName: string) {
     if (!account) return;
     setError(null);
     setSaving(true);
@@ -160,10 +160,9 @@ export default function AddProfile({
         }
       }
 
-      const name = account.name || account.login;
       const stored = await api.addProfile({
-        displayName: name,
-        gitName: name,
+        displayName: editedName,
+        gitName: editedName,
         gitEmail: email.trim() || account.suggestedEmail,
         providerId: selectedProviderId,
         login: account.login,
