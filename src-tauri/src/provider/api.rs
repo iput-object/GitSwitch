@@ -39,11 +39,12 @@ fn api_base(provider: &Provider) -> String {
 
 fn get_json(url: &str, accept: &str) -> Option<serde_json::Value> {
     ureq::get(url)
-        .set("User-Agent", "GitSwitch")
-        .set("Accept", accept)
+        .header("User-Agent", "GitSwitch")
+        .header("Accept", accept)
         .call()
         .ok()?
-        .into_json::<serde_json::Value>()
+        .body_mut()
+        .read_json::<serde_json::Value>()
         .ok()
 }
 

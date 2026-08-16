@@ -23,7 +23,10 @@ pub fn data_uri(blob: Option<Vec<u8>>, mime: Option<String>) -> Option<String> {
 
 /// Fetch the avatar image once, returning (bytes, mime). Failure is non-fatal.
 pub fn download_avatar(url: &str) -> Option<(Vec<u8>, String)> {
-    let resp = ureq::get(url).set("User-Agent", "GitSwitch").call().ok()?;
+    let resp = ureq::get(url)
+        .header("User-Agent", "GitSwitch")
+        .call()
+        .ok()?;
     let mime = resp
         .header("Content-Type")
         .unwrap_or("image/png")
