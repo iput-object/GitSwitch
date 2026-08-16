@@ -17,6 +17,7 @@
         "width": 960,
         "height": 600,
         "center": true,
+        "visible": false,
         "decorations": false,
         "backgroundColor": "#0a0a0a",
         "fullscreen": false,

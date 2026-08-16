@@ -15,6 +15,7 @@ use tauri::Manager;
 
 fn main() {
     let is_cli_invocation = cli::is_cli_invocation();
+    let is_hidden_startup = cli::is_hidden_startup();
     let mut builder = tauri::Builder::default().plugin(tauri_plugin_cli::init());
 
     if !is_cli_invocation {
@@ -34,13 +35,21 @@ fn main() {
         ))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .setup(|app| {
+        .setup(move |app| {
             cli::dispatch(app);
 
             let handle = app.handle().clone();
             app.handle().run_on_main_thread(move || {
                 if let Err(e) = tray::create(&handle) {
                     eprintln!("tray init failed: {e}");
+                }
+
+                if !is_hidden_startup {
+                    if let Some(window) = handle.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.unminimize();
+                        let _ = window.set_focus();
+                    }
                 }
             })?;
             Ok(())

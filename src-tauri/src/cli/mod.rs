@@ -19,13 +19,22 @@ pub fn is_cli_invocation() -> bool {
         || CLI_COMMANDS.contains(&first_arg.as_str())
 }
 
+pub fn is_hidden_startup() -> bool {
+    std::env::args().any(|arg| arg == "--hidden")
+}
+
 /// Handle CLI subcommands. Calls into existing service functions.
 /// If a subcommand ran, exits the process; otherwise returns to let the app
 /// continue with the GUI.
 pub fn dispatch(app: &tauri::App) {
-    let Ok(matches) = app.cli().matches() else {
-        std::process::exit(1);
+    let matches = match app.cli().matches() {
+        Ok(matches) => matches,
+        Err(error) => {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
     };
+
     if let Some(help_text) = matches.args.get("help").and_then(|a| a.value.as_str()) {
         print!("{help_text}");
         std::process::exit(0);
