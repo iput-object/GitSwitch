@@ -1,5 +1,4 @@
 use base64::{engine::general_purpose, Engine as _};
-use std::io::Read;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn now_nanos() -> u128 {
@@ -23,16 +22,17 @@ pub fn data_uri(blob: Option<Vec<u8>>, mime: Option<String>) -> Option<String> {
 
 /// Fetch the avatar image once, returning (bytes, mime). Failure is non-fatal.
 pub fn download_avatar(url: &str) -> Option<(Vec<u8>, String)> {
-    let resp = ureq::get(url)
+    let mut resp = ureq::get(url)
         .header("User-Agent", "GitSwitch")
         .call()
         .ok()?;
     let mime = resp
-        .header("Content-Type")
+        .headers()
+        .get("Content-Type")
+        .and_then(|value| value.to_str().ok())
         .unwrap_or("image/png")
         .to_string();
-    let mut bytes = Vec::new();
-    resp.into_reader().read_to_end(&mut bytes).ok()?;
+    let bytes = resp.body_mut().read_to_vec().ok()?;
     if bytes.is_empty() {
         return None;
     }
