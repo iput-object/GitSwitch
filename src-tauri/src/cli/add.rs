@@ -6,9 +6,9 @@ use crate::models::NewProfile;
 pub fn run(app: &tauri::AppHandle, provider_name: &str, key_input: &str) {
     // 1. Find the provider by name (case-insensitive)
     let providers = unwrap_or_exit(crate::database::providers::list_providers(app.clone()));
-    let provider = providers
-        .iter()
-        .find(|p| p.name.eq_ignore_ascii_case(provider_name) || p.id.eq_ignore_ascii_case(provider_name));
+    let provider = providers.iter().find(|p| {
+        p.name.eq_ignore_ascii_case(provider_name) || p.id.eq_ignore_ascii_case(provider_name)
+    });
 
     let Some(provider) = provider else {
         eprintln!("No provider found matching '{provider_name}'.");
@@ -42,7 +42,10 @@ pub fn run(app: &tauri::AppHandle, provider_name: &str, key_input: &str) {
     };
 
     // 4. Save the profile
-    let display_name = account.name.clone().unwrap_or_else(|| account.login.clone());
+    let display_name = account
+        .name
+        .clone()
+        .unwrap_or_else(|| account.login.clone());
     let profile = NewProfile {
         provider_id: account.provider_id,
         login: account.login.clone(),

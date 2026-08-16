@@ -14,15 +14,20 @@ mod utils;
 use tauri::Manager;
 
 fn main() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_cli::init())
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    let is_cli_invocation = cli::is_cli_invocation();
+    let mut builder = tauri::Builder::default().plugin(tauri_plugin_cli::init());
+
+    if !is_cli_invocation {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.unminimize();
                 let _ = window.set_focus();
             }
-        }))
+        }));
+    }
+
+    builder
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--hidden"]),

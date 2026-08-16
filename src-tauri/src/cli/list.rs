@@ -11,7 +11,11 @@ pub fn run(app: &tauri::AppHandle) {
         .and_then(|s| s.active_id);
 
     for p in &profiles {
-        let marker = if active.as_deref() == Some(&p.id) { "* " } else { "  " };
+        let marker = if active.as_deref() == Some(&p.id) {
+            "* "
+        } else {
+            "  "
+        };
         println!("{marker}{}", fmt_profile(p));
     }
 }

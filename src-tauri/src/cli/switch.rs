@@ -2,7 +2,9 @@ use super::common::{fmt_profile, unwrap_or_exit, NO_PROFILES};
 
 pub fn run(app: &tauri::AppHandle, login: &str) {
     let profiles = unwrap_or_exit(crate::database::profiles::list_profiles(app.clone()));
-    let found = profiles.iter().find(|p| p.login.eq_ignore_ascii_case(login));
+    let found = profiles
+        .iter()
+        .find(|p| p.login.eq_ignore_ascii_case(login));
 
     let Some(profile) = found else {
         eprintln!("No profile found with login '{login}'.");

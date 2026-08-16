@@ -74,9 +74,6 @@
               "required": true
             }
           ]
-        },
-        "help": {
-          "description": "Show available commands"
         }
       }
     },
