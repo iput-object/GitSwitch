@@ -1,4 +1,4 @@
-use super::{fmt_profile, unwrap_or_exit};
+use super::common::{fmt_profile, unwrap_or_exit};
 use crate::models::NewProfile;
 
 /// Add a profile from the CLI: resolve the SSH key against a provider, discover

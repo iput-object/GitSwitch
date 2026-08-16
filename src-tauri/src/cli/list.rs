@@ -1,4 +1,4 @@
-use super::{fmt_profile, unwrap_or_exit, NO_PROFILES};
+use super::common::{fmt_profile, unwrap_or_exit, NO_PROFILES};
 
 pub fn run(app: &tauri::AppHandle) {
     let profiles = unwrap_or_exit(crate::database::profiles::list_profiles(app.clone()));

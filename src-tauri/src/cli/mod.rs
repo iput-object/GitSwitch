@@ -1,9 +1,9 @@
 mod add;
+mod common;
 mod help;
 mod list;
 mod switch;
 
-use crate::models::StoredProfile;
 use tauri::Manager;
 
 /// Handle CLI subcommands. Calls into existing service functions.
@@ -21,11 +21,7 @@ pub fn dispatch(app: &tauri::App) {
                 std::process::exit(0);
             }
             "switch" => {
-                let login = sub
-                    .matches
-                    .args
-                    .get("login")
-                    .and_then(|a| a.value.as_str().map(String::from));
+                let login = common::get_arg(sub, "login");
                 match login {
                     Some(l) => switch::run(app.handle(), &l),
                     None => {
@@ -40,16 +36,8 @@ pub fn dispatch(app: &tauri::App) {
                 std::process::exit(0);
             }
             "add" => {
-                let provider = sub
-                    .matches
-                    .args
-                    .get("provider")
-                    .and_then(|a| a.value.as_str().map(String::from));
-                let key = sub
-                    .matches
-                    .args
-                    .get("key")
-                    .and_then(|a| a.value.as_str().map(String::from));
+                let provider = common::get_arg(sub, "provider");
+                let key = common::get_arg(sub, "key");
                 match (provider, key) {
                     (Some(p), Some(k)) => add::run(app.handle(), &p, &k),
                     _ => {
@@ -80,26 +68,3 @@ pub fn dispatch(app: &tauri::App) {
     }
 }
 
-// ── shared helpers used across subcommands ──
-
-/// One-line format for a profile, reused by list/switch/current/add.
-fn fmt_profile(p: &StoredProfile) -> String {
-    format!(
-        "{} ({}) <{}> [{}]",
-        p.login, p.display_name, p.git_email, p.provider_name
-    )
-}
-
-/// Unwrap a service Result or print the error and exit.
-fn unwrap_or_exit<T>(result: Result<T, String>) -> T {
-    match result {
-        Ok(v) => v,
-        Err(e) => {
-            eprintln!("Error: {e}");
-            std::process::exit(1);
-        }
-    }
-}
-
-const NO_PROFILES: &str =
-    "No profiles available. Add one with: gitswitch add --provider <name> --key <path>";

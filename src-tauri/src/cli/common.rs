@@ -21,3 +21,11 @@ pub fn unwrap_or_exit<T>(result: Result<T, String>) -> T {
 
 pub const NO_PROFILES: &str =
     "No profiles available. Add one with: gitswitch add --provider <name> --key <path>";
+
+/// Extract a string argument from clap matches
+pub fn get_arg(sub: &tauri_plugin_cli::SubcommandMatches, name: &str) -> Option<String> {
+    sub.matches
+        .args
+        .get(name)
+        .and_then(|a| a.value.as_str().map(String::from))
+}
