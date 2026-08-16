@@ -30,46 +30,51 @@
   },
   "plugins": {
     "cli": {
-      "description": "Manage multiple git provider accounts from the command line",
+      "description": "gitswitch - Manage Git identities, SSH keys, and active provider profiles from the command line",
+      "afterHelp": "Examples:\n  gitswitch list\n  gitswitch current\n  gitswitch switch octocat\n  gitswitch add --provider github --key ~/.ssh/id_ed25519\n\nProviders can be referenced by built-in id or display name, such as github, gitlab, or bitbucket.",
       "args": [
         {
           "name": "hidden",
-          "description": "Start minimized to system tray"
+          "description": "Start the desktop app hidden in the system tray"
         }
       ],
       "subcommands": {
         "list": {
-          "description": "List all saved profiles"
+          "description": "List all saved profiles",
+          "afterHelp": "Prints every saved GitSwitch profile. The active profile is marked with an asterisk.\n\nExample:\n  gitswitch list"
         },
         "switch": {
-          "description": "Switch to a profile by login name",
+          "description": "Switch to a saved profile by login",
+          "afterHelp": "Activates a saved profile by its login name. This updates GitSwitch state and applies the selected identity for Git operations.\n\nExample:\n  gitswitch switch octocat",
           "args": [
             {
               "name": "login",
               "index": 1,
-              "description": "The login/username to switch to",
+              "description": "Login or username of the saved profile to activate",
               "takesValue": true,
               "required": true
             }
           ]
         },
         "current": {
-          "description": "Show the currently active profile"
+          "description": "Show the active profile",
+          "afterHelp": "Prints the profile currently selected in GitSwitch. If no profile is active, the command reports that state.\n\nExample:\n  gitswitch current"
         },
         "add": {
-          "description": "Add a new profile from an SSH key",
+          "description": "Add a profile from an SSH private key",
+          "afterHelp": "Resolves an SSH private key against the selected provider, discovers the matching account, and saves it as a GitSwitch profile.\n\nExample:\n  gitswitch add --provider github --key ~/.ssh/id_ed25519",
           "args": [
             {
               "name": "provider",
               "short": "p",
-              "description": "Provider name (e.g. github, gitlab, bitbucket)",
+              "description": "Provider id or name, for example github, gitlab, or bitbucket",
               "takesValue": true,
               "required": true
             },
             {
               "name": "key",
               "short": "k",
-              "description": "Path to SSH private key",
+              "description": "Path to the SSH private key used to identify the account",
               "takesValue": true,
               "required": true
             }
