@@ -4,10 +4,10 @@ use crate::database::core::{
     SELECT_COLS,
 };
 use crate::models::{NewProfile, StoredProfile};
-use serde::Serialize;
 use crate::provider;
 use crate::utils::{data_uri, download_avatar, now_nanos};
 use rusqlite::{params, OptionalExtension};
+use serde::Serialize;
 use tauri::AppHandle;
 
 #[tauri::command(async)]
@@ -212,7 +212,10 @@ pub fn get_profile_defaults(app: AppHandle, id: String) -> Result<ProfileDefault
     let account = provider::api::fetch_account(&prov, &login);
     let title = account.name.unwrap_or_else(|| login.clone());
     let kind = crate::provider::ProviderKind::parse(&prov.kind);
-    let email = account.email.or_else(|| crate::provider::suggested_email(kind, &login, account.id)).unwrap_or_default();
+    let email = account
+        .email
+        .or_else(|| crate::provider::suggested_email(kind, &login, account.id))
+        .unwrap_or_default();
 
     Ok(ProfileDefaults {
         display_name: title,
@@ -235,7 +238,10 @@ pub fn reset_profile_defaults(app: AppHandle, id: String) -> Result<StoredProfil
     let account = provider::api::fetch_account(&prov, &login);
     let title = account.name.unwrap_or_else(|| login.clone());
     let kind = crate::provider::ProviderKind::parse(&prov.kind);
-    let email = account.email.or_else(|| crate::provider::suggested_email(kind, &login, account.id)).unwrap_or_default();
+    let email = account
+        .email
+        .or_else(|| crate::provider::suggested_email(kind, &login, account.id))
+        .unwrap_or_default();
 
     conn.execute(
         "UPDATE profiles SET display_name = ?1, git_name = ?1, git_email = ?2 WHERE id = ?3",

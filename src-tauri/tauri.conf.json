@@ -29,6 +29,57 @@
     }
   },
   "plugins": {
+    "cli": {
+      "description": "Manage multiple git provider accounts from the command line",
+      "args": [
+        {
+          "name": "hidden",
+          "description": "Start minimized to system tray"
+        }
+      ],
+      "subcommands": {
+        "list": {
+          "description": "List all saved profiles"
+        },
+        "switch": {
+          "description": "Switch to a profile by login name",
+          "args": [
+            {
+              "name": "login",
+              "index": 1,
+              "description": "The login/username to switch to",
+              "takesValue": true,
+              "required": true
+            }
+          ]
+        },
+        "current": {
+          "description": "Show the currently active profile"
+        },
+        "add": {
+          "description": "Add a new profile from an SSH key",
+          "args": [
+            {
+              "name": "provider",
+              "short": "p",
+              "description": "Provider name (e.g. github, gitlab, bitbucket)",
+              "takesValue": true,
+              "required": true
+            },
+            {
+              "name": "key",
+              "short": "k",
+              "description": "Path to SSH private key",
+              "takesValue": true,
+              "required": true
+            }
+          ]
+        },
+        "help": {
+          "description": "Show available commands"
+        }
+      }
+    },
     "updater": {
       "endpoints": [
         "https://github.com/iput-object/GitSwitch/releases/latest/download/latest.json"

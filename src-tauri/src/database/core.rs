@@ -27,8 +27,20 @@ fn has_column(conn: &Connection, table: &str, column: &str) -> bool {
 fn seed_providers(conn: &Connection) -> Result<(), String> {
     let now = now_nanos() as i64;
     let builtins = [
-        ("github", "github", "GitHub", "github.com", "https://api.github.com"),
-        ("gitlab", "gitlab", "GitLab", "gitlab.com", "https://gitlab.com/api/v4"),
+        (
+            "github",
+            "github",
+            "GitHub",
+            "github.com",
+            "https://api.github.com",
+        ),
+        (
+            "gitlab",
+            "gitlab",
+            "GitLab",
+            "gitlab.com",
+            "https://gitlab.com/api/v4",
+        ),
         (
             "bitbucket",
             "bitbucket",
@@ -118,7 +130,10 @@ pub(crate) fn open(app: &AppHandle) -> Result<Connection, String> {
     }
     if !has_column(&conn, "profiles", "login") {
         if has_column(&conn, "profiles", "github_login") {
-            let _ = conn.execute("ALTER TABLE profiles RENAME COLUMN github_login TO login", []);
+            let _ = conn.execute(
+                "ALTER TABLE profiles RENAME COLUMN github_login TO login",
+                [],
+            );
         } else {
             let _ = conn.execute("ALTER TABLE profiles ADD COLUMN login TEXT", []);
         }

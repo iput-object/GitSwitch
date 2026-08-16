@@ -44,5 +44,8 @@ pub fn ssh_identify(host: &str, kind: ProviderKind, key_path: &Path) -> Result<S
             "{host} did not recognize this key yet. Add the public key to your account, then sync again."
         ));
     }
-    Err(format!("Could not verify the key with {host}.\n{}", text.trim()))
+    Err(format!(
+        "Could not verify the key with {host}.\n{}",
+        text.trim()
+    ))
 }

@@ -1,8 +1,8 @@
-pub mod core;
-pub mod providers;
-pub mod profiles;
 pub mod active;
+pub mod core;
+pub mod profiles;
+pub mod providers;
 
-pub(crate) use self::core::open;
-pub use self::core::list_for_tray;
 pub use self::active::activate;
+pub use self::core::list_for_tray;
+pub(crate) use self::core::open;

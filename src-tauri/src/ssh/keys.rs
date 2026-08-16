@@ -1,5 +1,7 @@
 use crate::paths::command;
-use crate::ssh::fs::{expand_path, is_staged, move_file, set_mode, ssh_dir, staged_key_path, stamp};
+use crate::ssh::fs::{
+    expand_path, is_staged, move_file, set_mode, ssh_dir, staged_key_path, stamp,
+};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
@@ -96,16 +98,12 @@ pub fn commit_key(key_path: String, login: String) -> Result<String, String> {
         std::fs::create_dir_all(&dir).map_err(|e| format!("Could not create {:?}: {e}", dir))?;
         set_mode(&dir, 0o700);
     }
-    
+
     let safe: String = login
         .chars()
         .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_')
         .collect();
-    let base = if safe.is_empty() {
-        "key".into()
-    } else {
-        safe
-    };
+    let base = if safe.is_empty() { "key".into() } else { safe };
 
     let mut dest = dir.join(&base);
     if dest.exists() {
