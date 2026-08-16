@@ -10,6 +10,7 @@ GitSwitch is a fast, lightweight desktop application built with Tauri and React 
 - **Automatic Commit Signing:** Flawlessly wires up SSH commit signing so your work is always verified.
 - **Config Repair & Health Checks:** Automatically detects and repairs drift in your live Git or SSH configuration.
 - **System Tray Integration:** Lives in your background for fast access on macOS, Windows, and Linux.
+- **CLI Support:** Allows you to manage profiles from the command line.
 
 ## Getting Started
 
@@ -46,6 +47,7 @@ This project requires Node.js and Rust.
 ## Todo List
 - [x] SSH commit signing — sets `gpg.format=ssh`, `user.signingkey`, and `commit.gpgsign` on profile switch.
 - [x] Add support for more Git providers (GitLab, Bitbucket, etc.)
+- [x] Add CLI support for multiple platforms.
 - [ ] Implement OAuth/Login flow as an alternative to SSH keys
 
 ## Development Approach
