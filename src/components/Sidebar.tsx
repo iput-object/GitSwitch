@@ -1,5 +1,6 @@
 import * as React from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { confirm, message } from "@tauri-apps/plugin-dialog";
 import {
   Users,
   Key,
@@ -14,6 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import Help from "./Help";
 import GitConfig from "./GitConfig";
+import { relaunch } from "@tauri-apps/plugin-process";
 
 type SidebarProps = {
   activePage: string;
@@ -74,19 +76,31 @@ export default function Sidebar({
     setIsUpdating(true);
     try {
       await updateAvailable.downloadAndInstall();
-      alert(
-        "Update installed! Please restart GitSwitch to apply the new version.",
-      );
+
+      const shouldRestart = await confirm("Update installed! Wanna restart GitSwitch to apply the new version?", {
+        title: "Restart now?",
+        kind: "warning",
+
+      });
+      if (shouldRestart) {
+        await relaunch()
+      }
     } catch (e) {
       console.error(e);
-      alert("Failed to install update.");
+      await message("Failed to install update.", {
+          title: "Update failed",
+          kind: "error",
+        });
     } finally {
       setIsUpdating(false);
     }
   };
 
   return (
-    <aside data-tauri-drag-region className="flex h-full w-56 flex-col border-r border-white/6 bg-white/2 px-3 py-4">
+    <aside
+      data-tauri-drag-region
+      className="flex h-full w-56 flex-col border-r border-white/6 bg-white/2 px-3 py-4"
+    >
       {/* Navigation */}
       <nav className="flex flex-col gap-0.5">
         {navItems.map((item) => {
