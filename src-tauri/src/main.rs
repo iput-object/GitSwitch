@@ -19,6 +19,9 @@ fn main() {
     let mut builder = tauri::Builder::default().plugin(tauri_plugin_cli::init());
 
     if !is_cli_invocation {
+        builder = builder
+            .plugin(tauri_plugin_process::init())
+            .plugin(tauri_plugin_dialog::init());
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
