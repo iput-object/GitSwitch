@@ -32,7 +32,7 @@
   "plugins": {
     "cli": {
       "description": "gitswitch - Manage Git identities, SSH keys, and active provider profiles from the command line",
-      "afterHelp": "Examples:\n  gitswitch list\n  gitswitch current\n  gitswitch switch octocat\n  gitswitch add --provider github --key ~/.ssh/id_ed25519\n  gitswitch open\n\nProviders can be referenced by built-in id or display name, such as github, gitlab, or bitbucket.",
+      "afterHelp": "Examples:\n  gitswitch list\n  gitswitch current\n  gitswitch use octocat\n  gitswitch add --provider github --key ~/.ssh/id_ed25519\n  gitswitch open\n\nProviders can be referenced by built-in id or display name, such as github, gitlab, or bitbucket.",
       "args": [
         {
           "name": "hidden",
@@ -44,9 +44,9 @@
           "description": "List all saved profiles",
           "afterHelp": "Prints every saved GitSwitch profile. The active profile is marked with an asterisk.\n\nExample:\n  gitswitch list"
         },
-        "switch": {
+        "use": {
           "description": "Switch to a saved profile by login",
-          "afterHelp": "Activates a saved profile by its login name. This updates GitSwitch state and applies the selected identity for Git operations.\n\nExample:\n  gitswitch switch octocat",
+          "afterHelp": "Activates a saved profile by its login name. This updates GitSwitch state and applies the selected identity for Git operations.\n\nExample:\n  gitswitch use octocat",
           "args": [
             {
               "name": "login",

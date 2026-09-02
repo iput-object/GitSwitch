@@ -6,7 +6,7 @@ mod switch;
 use tauri::Manager;
 use tauri_plugin_cli::CliExt;
 
-const CLI_COMMANDS: &[&str] = &["add", "list", "switch", "current", "help"];
+const CLI_COMMANDS: &[&str] = &["add", "list", "use", "current", "help"];
 const GUI_COMMANDS: &[&str] = &["open"];
 
 /// True when this process should behave as a terminal command instead of
@@ -47,7 +47,7 @@ Usage:
 Commands:
   list                         List all saved profiles
   current                      Show the active profile
-  switch <login>               Switch to a saved profile by login
+  use <login>                  Switch to a saved profile by login
   add --provider <name> --key <path>
                                Add a profile from an SSH private key
   open                         Open the GitSwitch desktop app
@@ -60,7 +60,7 @@ Options:
 Examples:
   gitswitch list
   gitswitch current
-  gitswitch switch octocat
+  gitswitch use octocat
   gitswitch add --provider github --key ~/.ssh/id_ed25519
   gitswitch open
 
@@ -103,12 +103,12 @@ pub fn dispatch(app: &tauri::App) {
                 list::run(app.handle());
                 std::process::exit(0);
             }
-            "switch" => {
+            "use" => {
                 let login = common::get_arg(sub, "login");
                 match login {
                     Some(l) => switch::run(app.handle(), &l),
                     None => {
-                        eprintln!("Usage: gitswitch switch <login>");
+                        eprintln!("Usage: gitswitch use <login>");
                         std::process::exit(1);
                     }
                 }
