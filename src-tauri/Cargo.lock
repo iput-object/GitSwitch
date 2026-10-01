@@ -1475,7 +1475,7 @@ dependencies = [
 
 [[package]]
 name = "gitswitch"
-version = "3.3.0"
+version = "3.3.1"
 dependencies = [
  "base64 0.23.1",
  "rusqlite",
