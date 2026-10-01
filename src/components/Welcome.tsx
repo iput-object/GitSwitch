@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { motion, useReducedMotion, type Variants } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight, CircleNotch } from "@phosphor-icons/react";
 import { api, type HostInfo } from "../services/tauri";
+import { listContainer as container, listItem as item } from "../utils/motion";
 
 type WelcomeProps = {
   onContinue: () => void | Promise<void>;
@@ -17,18 +18,6 @@ function initials(name: string): string {
   const second = parts[1]?.[0] ?? "";
   return (first + second).toUpperCase() || "?";
 }
-
-const EASE = [0.16, 1, 0.3, 1] as const;
-
-const container: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.05, delayChildren: 0.04 } },
-};
-
-const item: Variants = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } },
-};
 
 export default function Welcome({ onContinue }: WelcomeProps) {
   const reduce = useReducedMotion();

@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { motion, type Variants } from "motion/react";
+import { motion } from "motion/react";
 import { ArrowLeft, Check, CircleNotch, WarningCircle, PencilSimple } from "@phosphor-icons/react";
 import type { ProviderAccount } from "../../services/tauri";
+import { container, item } from "../../utils/motion";
 
 type ConfirmStageProps = {
   account: ProviderAccount;
@@ -12,16 +13,6 @@ type ConfirmStageProps = {
   onSave: (name: string) => void;
   onCancel: () => void;
   reduce: boolean;
-};
-
-const EASE = [0.16, 1, 0.3, 1] as const;
-const container: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.07, delayChildren: 0.08 } },
-};
-const item: Variants = {
-  hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } },
 };
 
 export default function ConfirmStage({

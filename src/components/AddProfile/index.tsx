@@ -1,14 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react";
-import { ArrowsClockwise, CircleNotch, Key, WarningCircle } from "@phosphor-icons/react";
-import { api, type StoredProfile, type GeneratedKey, type ProviderAccount, type Provider } from "../../services/tauri";
-
+import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { CaretLeft } from "@phosphor-icons/react";
+import {
+  api,
+  type StoredProfile,
+  type GeneratedKey,
+  type ProviderAccount,
+  type Provider,
+} from "../../services/tauri";
+import { useTimeout } from "../../hooks/useTimeout";
+import { container, item } from "../../utils/motion";
+import { ProviderIcon } from "../ProviderIcon";
 import ConfirmStage from "./ConfirmStage";
 import SelectProviderStage from "./SelectProviderStage";
 import GeneratedKeyPanel from "./GeneratedKeyPanel";
-import { ProviderIcon } from "../ProviderIcon";
-import { CaretLeft } from "@phosphor-icons/react";
-import { useTimeout } from "../../utils/useTimeout";
+import { KeyInput, keyInputKind } from "./KeyInput";
+import { SyncButton } from "./SyncButton";
 
 type AddProfileProps = {
   initialInput?: string;
@@ -18,29 +25,6 @@ type AddProfileProps = {
   showCancel?: boolean;
 };
 
-const EASE = [0.16, 1, 0.3, 1] as const;
-const container: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.07, delayChildren: 0.08 } },
-};
-const item: Variants = {
-  hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } },
-};
-
-const STATUS = {
-  empty: null,
-  path: {
-    dot: "bg-neutral-500",
-    text: "Reading as a key path.",
-    accent: false,
-  },
-  key: {
-    dot: "bg-primary-400 animate-pulse",
-    text: "Private key detected — we'll store it in ~/.ssh.",
-    accent: true,
-  },
-} as const;
 
 export default function AddProfile({
   initialInput = "",
@@ -64,35 +48,17 @@ export default function AddProfile({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [focused, setFocused] = useState(false);
-  const [dragging, setDragging] = useState(false);
   const [shake, setShake] = useState(false);
   const shakeReset = useTimeout();
 
-  const taRef = useRef<HTMLTextAreaElement>(null);
   const didAutoSync = useRef(false);
 
   useEffect(() => {
     api.listProviders().then(setProviders).catch(console.error);
   }, []);
 
-  const kind = useMemo<"empty" | "key" | "path">(() => {
-    const t = input.trim();
-    if (!t) return "empty";
-    if (t.includes("PRIVATE KEY")) return "key";
-    return "path";
-  }, [input]);
+  const kind = keyInputKind(input);
 
-  function autoResize() {
-    const el = taRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }
-
-  useEffect(() => {
-    autoResize();
-  }, [input]);
 
   useEffect(() => {
     if (initialInput.trim() && !didAutoSync.current) {
@@ -120,6 +86,13 @@ export default function AddProfile({
     } finally {
       setGenerating(false);
     }
+  }
+
+  // Editing the field drops a generated key that no longer matches it.
+  function handleInputChange(value: string) {
+    setInput(value);
+    if (generated && value !== generated.keyPath) setGenerated(null);
+    if (error) setError(null);
   }
 
   async function handleSync() {
@@ -179,20 +152,6 @@ export default function AddProfile({
     }
   }
 
-  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
-    e.preventDefault();
-    setDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = String(ev.target?.result ?? "").trim();
-      setInput(text);
-      if (generated && text !== generated.keyPath) setGenerated(null);
-      if (error) setError(null);
-    };
-    reader.readAsText(file);
-  }
 
   if (account) {
     return (
@@ -224,7 +183,6 @@ export default function AddProfile({
     );
   }
 
-  const status = STATUS[kind];
   const activeProvider = providers.find(p => p.id === selectedProviderId);
 
   return (
@@ -266,110 +224,25 @@ export default function AddProfile({
       </motion.p>
 
       <motion.div variants={item} className="w-full max-w-85 text-left">
-        <div
-          onDragEnter={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragOver={(e) => e.preventDefault()}
-          onDragLeave={() => setDragging(false)}
-          onDrop={handleDrop}
-          className={[
-            "flex min-h-12 items-center gap-1.5 rounded-3xl border pl-5 pr-1.5 transition-all duration-200",
-            focused && !dragging ? "border-primary-400/60 bg-white/[0.07] ring-4 ring-primary-400/10" : "",
-            dragging ? "border-dashed border-primary-400/50 bg-primary-400/5 ring-4 ring-primary-400/10" : "",
-            !focused && !dragging ? "border-white/10 bg-white/5" : "",
-            shake ? "animate-shake" : "",
-          ].filter(Boolean).join(" ")}
-        >
-          <textarea
-            ref={taRef}
-            rows={1}
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              if (generated && e.target.value !== generated.keyPath)
-                setGenerated(null);
-              if (error) setError(null);
-            }}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            spellCheck={false}
-            placeholder={dragging ? "Drop key file here…" : "Private key, or a path to one"}
-            className="min-w-0 flex-1 resize-none overflow-hidden bg-transparent py-3
-                       font-mono text-[13px] leading-tight text-neutral-100 outline-none
-                       placeholder:font-sans placeholder:text-neutral-500"
-          />
-
-          {kind === "empty" && (
-            <button
-              onClick={handleCreate}
-              disabled={generating}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/5
-                         px-3 py-1.5 text-xs font-medium text-primary-300 ring-1 ring-white/10
-                         transition-colors hover:bg-white/10 disabled:opacity-60"
-            >
-              {generating ? <CircleNotch size={13} weight="bold" className="animate-spin" /> : <Key size={13} weight="bold" />}
-              {generating ? "Creating" : "Create key"}
-            </button>
-          )}
-        </div>
-
-        <div className="mt-3 px-1">
-          <AnimatePresence mode="wait">
-            {status && (
-              <motion.div
-                key={kind}
-                initial={reduce ? false : { opacity: 0, height: 0, marginBottom: 0 }}
-                animate={{ opacity: 1, height: "auto", marginBottom: 12 }}
-                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                transition={{ duration: 0.18 }}
-                className="flex items-center gap-1.5 overflow-hidden"
-              >
-                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${status.dot}`} />
-                <span className={`text-xs ${status.accent ? "text-primary-300/80" : "text-neutral-500"}`}>
-                  {status.text}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <KeyInput
+          value={input}
+          onChange={handleInputChange}
+          shake={shake}
+          generating={generating}
+          onCreateKey={handleCreate}
+          reduce={!!reduce}
+        />
       </motion.div>
 
       <GeneratedKeyPanel generated={generated} provider={activeProvider} reduce={reduce || false} />
 
-      <motion.button
-        variants={item}
-        onClick={handleSync}
-        disabled={syncing || kind === "empty"}
-        whileTap={{ scale: 0.98 }}
-        className={`relative inline-flex w-full max-w-85 items-center justify-center gap-2
-                   rounded-full py-3 text-sm font-semibold transition-[filter] hover:brightness-105 ${
-                     error
-                       ? "bg-rose-500 text-white"
-                       : "bg-linear-to-br from-primary-400 to-primary-500 text-neutral-950 " +
-                         "disabled:from-neutral-800 disabled:to-neutral-800 disabled:text-neutral-500 disabled:brightness-100"
-                   }`}
-      >
-        {syncing ? (
-          <CircleNotch size={16} weight="bold" className="animate-spin" />
-        ) : error ? (
-          <WarningCircle size={16} weight="bold" />
-        ) : (
-          <ArrowsClockwise size={16} weight="bold" />
-        )}
-        {syncing
-          ? "Syncing"
-          : error
-            ? "Couldn't sync, try again"
-            : "Sync from " + (providers.find(p => p.id === selectedProviderId)?.name || 'GitHub')}
-      </motion.button>
-
-      {error && !syncing && (
-        <p className="relative mt-2.5 max-w-85 text-xs leading-relaxed text-rose-300/90">
-          {error}
-        </p>
-      )}
+      <SyncButton
+        providerName={activeProvider?.name || "GitHub"}
+        syncing={syncing}
+        disabled={kind === "empty"}
+        error={error}
+        onSync={handleSync}
+      />
     </motion.div>
   );
 }

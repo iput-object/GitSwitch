@@ -5,6 +5,7 @@ import { api } from "../services/tauri";
 import { useHideEmail, setHideEmail } from "./Email";
 import { Toggle } from "./ui/Toggle";
 import { Button } from "./ui/Button";
+import { SectionHeading } from "./ui/SectionHeading";
 import { container, item } from "../utils/motion";
 import { motion, useReducedMotion } from "motion/react";
 
@@ -72,11 +73,7 @@ export default function Settings({ onClearAllProfiles }: SettingsProps) {
       >
         {/* Appearance Category */}
         <motion.section variants={item}>
-          <div className="mb-3">
-            <h3 className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
-              Appearance
-            </h3>
-          </div>
+          <SectionHeading className="mb-3">Appearance</SectionHeading>
 
           <div className="rounded-xl border border-white/6 bg-white/2 px-4 py-1">
             <Toggle
@@ -90,11 +87,7 @@ export default function Settings({ onClearAllProfiles }: SettingsProps) {
 
         {/* System Category */}
         <motion.section variants={item}>
-          <div className="mb-3">
-            <h3 className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
-              System
-            </h3>
-          </div>
+          <SectionHeading className="mb-3">System</SectionHeading>
 
           <div className="rounded-xl border border-white/6 bg-white/2 px-4 py-1">
             <Toggle
@@ -113,11 +106,7 @@ export default function Settings({ onClearAllProfiles }: SettingsProps) {
               onChange={handleTrayChange}
             />
           </div>
-          <div className="my-3">
-            <h3 className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
-              Danger
-            </h3>
-          </div>
+          <SectionHeading className="my-3">Danger</SectionHeading>
 
           <div className="rounded-xl border border-white/6 bg-white/2 px-4 py-3">
             <div className="flex items-center justify-between">

@@ -3,15 +3,14 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { AnimatePresence, motion } from "motion/react";
 import { Check, Copy } from "@phosphor-icons/react";
 import type { GeneratedKey, Provider } from "../../services/tauri";
-import { useTimeout } from "../../utils/useTimeout";
+import { useTimeout } from "../../hooks/useTimeout";
+import { EASE } from "../../utils/motion";
 
 type GeneratedKeyPanelProps = {
   generated: GeneratedKey | null;
   provider?: Provider;
   reduce: boolean;
 };
-
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 const PROVIDER_SSH_PATHS: Record<string, string> = {
   github: "/settings/ssh/new",

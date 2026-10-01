@@ -2,8 +2,8 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "@phosphor-icons/react";
-import type { StoredProfile } from "../services/tauri";
-import { api } from "../services/tauri";
+import type { StoredProfile } from "../../services/tauri";
+import { api } from "../../services/tauri";
 
 export default function EditProfileModal({
   profile,

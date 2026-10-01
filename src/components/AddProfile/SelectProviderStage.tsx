@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { motion, useReducedMotion, type Variants } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import type { Provider } from "../../services/tauri";
 import { ProviderIcon } from "../ProviderIcon";
 import CustomProviderForm from "./CustomProviderForm";
 import { CaretLeft, CaretRight, Plus, X } from "@phosphor-icons/react";
+import { container, item } from "../../utils/motion";
 
 type SelectProviderStageProps = {
   providers: Provider[];
@@ -23,18 +24,6 @@ export default function SelectProviderStage({
 }: SelectProviderStageProps) {
   const reduce = useReducedMotion();
   const [isCustom, setIsCustom] = useState(false);
-
-  const EASE = [0.16, 1, 0.3, 1] as const;
-
-  const container: Variants = {
-    hidden: {},
-    show: { transition: { staggerChildren: 0.07, delayChildren: 0.08 } },
-  };
-
-  const item: Variants = {
-    hidden: { opacity: 0, y: 14 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } },
-  };
 
   return (
     <motion.div

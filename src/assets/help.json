@@ -11,7 +11,7 @@
     },
     {
       "q": "Why does my provider say “Unverified”?",
-      "a": "Many providers (like GitHub or GitLab) store **Authentication keys** and **Signing keys** separately. Pushing works because your key is registered for auth — but signatures stay “Unverified” until the *same* key is also added as a Signing Key.\n\n1. Go to your provider's SSH key settings.\n2. Add the profile's public key (the same `.pub` you use for auth) and mark it for **Signing**.\n\nOne key covers both roles. Past commits flip to “Verified” retroactively once the Signing Key is added."
+      "a": "Many providers (like GitHub or GitLab) store **Authentication keys** and **Signing keys** separately. Pushing works because your key is registered for auth, but signatures stay “Unverified” until the *same* key is also added as a Signing Key.\n\n1. Go to your provider's SSH key settings.\n2. Add the profile's public key (the same `.pub` you use for auth) and mark it for **Signing**.\n\nOne key covers both roles. Past commits flip to “Verified” retroactively once the Signing Key is added."
     },
     {
       "q": "Why can't it verify my email?",
@@ -19,7 +19,7 @@
     },
     {
       "q": "Why only SSH keys?",
-      "a": "GitSwitch is brand new, and SSH is the simplest, most universal way to manage Git identity — one key handles both auth and commit signing. Support for **GPG keys** and **OAuth/token login** is on the roadmap; SSH was just the right place to start."
+      "a": "GitSwitch is brand new, and SSH is the simplest, most universal way to manage Git identity: one key handles both auth and commit signing. Support for **GPG keys** and **OAuth/token login** is on the roadmap; SSH was just the right place to start."
     }
   ]
 }

@@ -1,19 +1,10 @@
 import { useState } from "react";
 import { Copy, Check } from "@phosphor-icons/react";
-import { motion, useReducedMotion, type Variants } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import type { StoredProfile } from "../services/tauri";
 import { ProviderIcon } from "./ProviderIcon";
-import { useTimeout } from "../utils/useTimeout";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
-const container: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.05, delayChildren: 0.04 } },
-};
-const item: Variants = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } },
-};
+import { useTimeout } from "../hooks/useTimeout";
+import { listContainer as container, listItem as item } from "../utils/motion";
 
 type SSHKeysProps = {
   profiles: StoredProfile[];
