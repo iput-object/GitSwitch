@@ -89,7 +89,7 @@ pub fn add_profile(app: AppHandle, profile: NewProfile) -> Result<StoredProfile,
     })
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn list_profiles(app: AppHandle) -> Result<Vec<StoredProfile>, String> {
     let conn = open(&app)?;
     let mut stmt = conn
@@ -109,7 +109,7 @@ pub fn list_profiles(app: AppHandle) -> Result<Vec<StoredProfile>, String> {
     Ok(out)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn delete_profile(app: AppHandle, id: String) -> Result<(), String> {
     let conn = open(&app)?;
     conn.execute("DELETE FROM profiles WHERE id = ?1", params![id])
@@ -118,7 +118,7 @@ pub fn delete_profile(app: AppHandle, id: String) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn delete_all_profiles(app: AppHandle) -> Result<(), String> {
     let conn = open(&app)?;
     conn.execute("DELETE FROM profiles", params![])
@@ -164,9 +164,10 @@ pub fn refresh_profile(app: AppHandle, id: String) -> Result<StoredProfile, Stri
         .map_err(|e| format!("Could not update avatar: {e}"))?;
     }
 
-    let updated = read_one(&conn, &id)?;
-    crate::tray::rebuild(&app);
-    Ok(updated)
+    // Only stats/avatar changed — nothing the tray menu shows, so no rebuild.
+    // (On Linux every rebuild re-registers the appindicator; refresh-all would
+    // otherwise churn it once per profile.)
+    read_one(&conn, &id)
 }
 
 #[tauri::command(async)]

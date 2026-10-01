@@ -3,6 +3,7 @@
 //! different key at the same time. We only ever touch the block for the host
 //! being switched — every other host (managed or hand-written) is preserved.
 
+use crate::ssh::fs::set_mode;
 use crate::ssh::{expand_path, ssh_dir};
 use std::path::PathBuf;
 
@@ -90,14 +91,6 @@ fn comment_conflicting(text: &str, host: &str) -> String {
     out.join("\n")
 }
 
-#[cfg(unix)]
-fn set_mode(path: &std::path::Path, mode: u32) {
-    use std::os::unix::fs::PermissionsExt;
-    let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode));
-}
-#[cfg(not(unix))]
-fn set_mode(_path: &std::path::Path, _mode: u32) {}
-
 /// Point `host` at `key_path` by rewriting only our managed block for that host
 /// in ~/.ssh/config. The block goes first so it wins (ssh takes the first value
 /// per parameter), any conflicting plain block for the same host is commented
@@ -107,13 +100,19 @@ pub fn apply_ssh_config(host: &str, key_path: &str) -> Result<(), String> {
     let existing = std::fs::read_to_string(&config).unwrap_or_default();
     let preserved = comment_conflicting(&strip_managed_block(&existing, host), host);
 
+    // ssh splits arguments on whitespace, so a key path with spaces needs quotes.
+    let identity = if key_path.contains(char::is_whitespace) {
+        format!("\"{key_path}\"")
+    } else {
+        key_path.to_string()
+    };
     let block = format!(
         "{begin}\n\
          # Managed by GitSwitch. Edits inside this block are overwritten on switch.\n\
          Host {host}\n    \
          HostName {host}\n    \
          User git\n    \
-         IdentityFile {key_path}\n    \
+         IdentityFile {identity}\n    \
          IdentitiesOnly yes\n\
          {end}\n",
         begin = begin_marker(host),
@@ -128,7 +127,61 @@ pub fn apply_ssh_config(host: &str, key_path: &str) -> Result<(), String> {
         content.push('\n');
     }
 
-    std::fs::write(&config, content).map_err(|e| format!("Could not write ~/.ssh/config: {e}"))?;
-    set_mode(&config, 0o600);
+    // Write to a sibling file and rename over the original, so a crash or full
+    // disk mid-write can never leave ~/.ssh/config truncated. Follow a symlinked
+    // config (dotfile managers) so the rename replaces its target, not the link.
+    let target = std::fs::canonicalize(&config).unwrap_or(config);
+    let staged = target.with_file_name(".config.gitswitch-tmp");
+    std::fs::write(&staged, content).map_err(|e| format!("Could not write ~/.ssh/config: {e}"))?;
+    set_mode(&staged, 0o600);
+    std::fs::rename(&staged, &target).map_err(|e| {
+        let _ = std::fs::remove_file(&staged);
+        format!("Could not write ~/.ssh/config: {e}")
+    })?;
     Ok(())
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    /// Point HOME at a fresh scratch dir. Single test, so no env races.
+    fn scratch_home() -> PathBuf {
+        let home = std::env::temp_dir().join(format!("gitswitch-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&home);
+        std::fs::create_dir_all(home.join(".ssh")).unwrap();
+        // SAFETY: only this test touches HOME, and it runs on one thread.
+        unsafe { std::env::set_var("HOME", &home) };
+        home
+    }
+
+    #[test]
+    fn apply_rewrites_block_atomically_and_keeps_symlinks() {
+        let home = scratch_home();
+        let real = home.join("dotfiles-ssh-config");
+        std::fs::write(&real, "Host github.com\n    IdentityFile ~/.ssh/old\n\nHost other\n    User me\n").unwrap();
+        let link = home.join(".ssh/config");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+
+        apply_ssh_config("github.com", "/keys/my key").unwrap();
+        apply_ssh_config("github.com", "/keys/second").unwrap();
+
+        // The link survives and its target holds exactly one managed block.
+        assert!(std::fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+        let text = std::fs::read_to_string(&real).unwrap();
+        assert_eq!(text.matches(&begin_marker("github.com")).count(), 1);
+        assert!(text.contains("IdentityFile /keys/second"));
+        assert!(text.contains("#     IdentityFile ~/.ssh/old"), "{text}");
+        assert!(text.contains("Host other\n    User me"));
+        assert!(!home.join(".ssh/.config.gitswitch-tmp").exists());
+        assert_eq!(current_key_for_host("github.com"), Some(PathBuf::from("/keys/second")));
+
+        // Paths with spaces are quoted so ssh reads them as one argument.
+        apply_ssh_config("gitlab.com", "/keys/my key").unwrap();
+        let text = std::fs::read_to_string(&real).unwrap();
+        assert!(text.contains("IdentityFile \"/keys/my key\""));
+        assert_eq!(current_key_for_host("gitlab.com"), Some(PathBuf::from("/keys/my key")));
+
+        let _ = std::fs::remove_dir_all(&home);
+    }
 }

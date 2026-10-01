@@ -38,8 +38,8 @@ fn api_base(provider: &Provider) -> String {
 }
 
 fn get_json(url: &str, accept: &str) -> Option<serde_json::Value> {
-    ureq::get(url)
-        .header("User-Agent", "GitSwitch")
+    crate::utils::http()
+        .get(url)
         .header("Accept", accept)
         .call()
         .ok()?

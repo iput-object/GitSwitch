@@ -41,6 +41,11 @@ fn main() {
         .setup(move |app| {
             cli::dispatch(app);
 
+            // Only the GUI reaches here (CLI subcommands exit inside dispatch).
+            std::thread::spawn(|| {
+                ssh::fs::purge_stale_staged(std::time::Duration::from_secs(60 * 60))
+            });
+
             let handle = app.handle().clone();
             app.handle().run_on_main_thread(move || {
                 if let Err(e) = tray::create(&handle) {
@@ -86,7 +91,6 @@ fn main() {
             database::active::reconcile_active,
             database::active::activate_profile,
             database::active::activate_partial,
-            database::profiles::update_profile_details,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

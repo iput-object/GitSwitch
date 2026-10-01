@@ -139,7 +139,7 @@ fn find_by_key(conn: &Connection, provider_id: &str, key_path: &std::path::Path)
     None
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_active_state(app: AppHandle) -> Result<ActiveState, String> {
     let conn = open(&app)?;
     Ok(ActiveState {

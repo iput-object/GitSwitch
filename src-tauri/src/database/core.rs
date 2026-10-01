@@ -1,6 +1,9 @@
 use crate::models::StoredProfile;
 use crate::utils::{data_uri, now_nanos};
 use rusqlite::{params, Connection, OptionalExtension};
+use std::path::PathBuf;
+use std::sync::OnceLock;
+use std::time::Duration;
 use tauri::{AppHandle, Manager};
 
 pub const ACTIVE_KEY: &str = "active_profile";
@@ -61,17 +64,23 @@ fn seed_providers(conn: &Connection) -> Result<(), String> {
     Ok(())
 }
 
-/// Open the database (creating the file and schema on first use).
-pub(crate) fn open(app: &AppHandle) -> Result<Connection, String> {
+/// The database file path; resolved and its directory created once per process.
+fn db_path(app: &AppHandle) -> Result<PathBuf, String> {
+    static PATH: OnceLock<PathBuf> = OnceLock::new();
+    if let Some(path) = PATH.get() {
+        return Ok(path.clone());
+    }
     let dir = app
         .path()
         .app_data_dir()
         .map_err(|e| format!("Could not resolve app data dir: {e}"))?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("Could not create app data dir: {e}"))?;
-    let conn = Connection::open(dir.join("gitswitch.db"))
-        .map_err(|e| format!("Could not open database: {e}"))?;
-    conn.execute("PRAGMA foreign_keys = ON;", [])
-        .map_err(|e| format!("Could not enable foreign keys: {e}"))?;
+    Ok(PATH.get_or_init(|| dir.join("gitswitch.db")).clone())
+}
+
+/// Create the schema, seed built-ins and run column migrations. Only needs to
+/// happen once per process, not on every command.
+fn init_schema(conn: &Connection) -> Result<(), String> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS providers (
             id           TEXT PRIMARY KEY,
@@ -110,10 +119,10 @@ pub(crate) fn open(app: &AppHandle) -> Result<Connection, String> {
     )
     .map_err(|e| format!("Could not init database: {e}"))?;
 
-    seed_providers(&conn)?;
+    seed_providers(conn)?;
 
     for column in ["public_repos", "followers", "commits"] {
-        if !has_column(&conn, "profiles", column) {
+        if !has_column(conn, "profiles", column) {
             let _ = conn.execute(
                 &format!("ALTER TABLE profiles ADD COLUMN {column} INTEGER"),
                 [],
@@ -121,15 +130,15 @@ pub(crate) fn open(app: &AppHandle) -> Result<Connection, String> {
         }
     }
 
-    if !has_column(&conn, "profiles", "provider_id") {
+    if !has_column(conn, "profiles", "provider_id") {
         let _ = conn.execute("ALTER TABLE profiles ADD COLUMN provider_id TEXT", []);
         let _ = conn.execute(
             "UPDATE profiles SET provider_id = 'github' WHERE provider_id IS NULL",
             [],
         );
     }
-    if !has_column(&conn, "profiles", "login") {
-        if has_column(&conn, "profiles", "github_login") {
+    if !has_column(conn, "profiles", "login") {
+        if has_column(conn, "profiles", "github_login") {
             let _ = conn.execute(
                 "ALTER TABLE profiles RENAME COLUMN github_login TO login",
                 [],
@@ -137,10 +146,29 @@ pub(crate) fn open(app: &AppHandle) -> Result<Connection, String> {
         } else {
             let _ = conn.execute("ALTER TABLE profiles ADD COLUMN login TEXT", []);
         }
-    } else if has_column(&conn, "profiles", "github_login") {
+    } else if has_column(conn, "profiles", "github_login") {
         let _ = conn.execute("ALTER TABLE profiles DROP COLUMN github_login", []);
     }
+    Ok(())
+}
 
+/// Open the database (creating the file and schema on first use).
+pub(crate) fn open(app: &AppHandle) -> Result<Connection, String> {
+    static SCHEMA_READY: OnceLock<()> = OnceLock::new();
+
+    let conn =
+        Connection::open(db_path(app)?).map_err(|e| format!("Could not open database: {e}"))?;
+    // The tray worker and UI commands can hold connections at the same time;
+    // wait briefly for a lock instead of failing with SQLITE_BUSY.
+    conn.busy_timeout(Duration::from_secs(5))
+        .map_err(|e| format!("Could not configure database: {e}"))?;
+    conn.execute("PRAGMA foreign_keys = ON;", [])
+        .map_err(|e| format!("Could not enable foreign keys: {e}"))?;
+
+    if SCHEMA_READY.get().is_none() {
+        init_schema(&conn)?;
+        let _ = SCHEMA_READY.set(());
+    }
     Ok(conn)
 }
 

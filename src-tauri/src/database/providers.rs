@@ -38,13 +38,13 @@ pub(crate) fn read_partial(conn: &Connection) -> Result<Vec<ProviderActive>, Str
     Ok(out)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn list_providers(app: AppHandle) -> Result<Vec<Provider>, String> {
     let conn = open(&app)?;
     provider::list(&conn)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn add_provider(app: AppHandle, provider: NewProvider) -> Result<Provider, String> {
     let conn = open(&app)?;
     let host = provider.host.trim().to_string();

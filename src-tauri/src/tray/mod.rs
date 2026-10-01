@@ -87,9 +87,11 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| on_menu_event(app, event.id().as_ref()))
         .on_tray_icon_event(|tray, event| {
-            // Log every tray event so it's possible to tell, from the console,
-            // whether Windows is even emitting left-clicks (a known-flaky path
-            // when a menu is attached) vs. the window failing to surface.
+            // Debug builds log tray events, to tell whether Windows is even
+            // emitting left-clicks (a known-flaky path when a menu is attached)
+            // vs. the window failing to surface. Release builds stay quiet:
+            // Move/Enter/Leave fire constantly while the pointer is over it.
+            #[cfg(debug_assertions)]
             eprintln!("tray event: {event:?}");
 
             let surface = matches!(

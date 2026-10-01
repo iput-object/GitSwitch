@@ -39,6 +39,27 @@ pub(crate) fn staging_dir() -> Result<PathBuf, String> {
     Ok(dir)
 }
 
+/// Delete staged keys left behind by abandoned add-profile attempts. They are
+/// unencrypted private keys sitting in the temp dir, so don't let them pile up.
+/// Only files older than `max_age` go, so a flow in progress is never touched.
+pub(crate) fn purge_stale_staged(max_age: std::time::Duration) {
+    let dir = std::env::temp_dir().join("gitswitch-keys");
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let stale = entry
+            .metadata()
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|modified| modified.elapsed().ok())
+            .is_some_and(|age| age > max_age);
+        if stale {
+            let _ = std::fs::remove_file(entry.path());
+        }
+    }
+}
+
 /// A fresh, collision-free private-key path inside the staging dir.
 pub(crate) fn staged_key_path() -> Result<PathBuf, String> {
     Ok(staging_dir()?.join(format!("gitswitch_{}", stamp())))
