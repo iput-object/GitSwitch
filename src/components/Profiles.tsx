@@ -1,4 +1,3 @@
-import * as React from "react";
 import { useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { motion, useReducedMotion, type Variants } from "motion/react";
@@ -17,6 +16,7 @@ import ActiveProfile from "./ActiveProfile";
 import { ProviderIcon } from "./ProviderIcon";
 import Email from "./Email";
 import EditProfileModal from "./EditProfileModal";
+import { useTimeout } from "../utils/useTimeout";
 
 type ProfilesProps = {
   profiles: StoredProfile[];
@@ -69,9 +69,7 @@ export default function Profiles({
     null,
   );
   const [isScrolling, setIsScrolling] = useState(false);
-  const scrollTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const scrollIdle = useTimeout();
 
   function startEditing(p: StoredProfile) {
     setEditingProfile(p);
@@ -80,10 +78,7 @@ export default function Profiles({
 
   function handleScroll() {
     if (!isScrolling) setIsScrolling(true);
-    if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
-    scrollTimeout.current = setTimeout(() => {
-      setIsScrolling(false);
-    }, 300);
+    scrollIdle.schedule(() => setIsScrolling(false), 300);
   }
 
   function handleSelect(id: string) {

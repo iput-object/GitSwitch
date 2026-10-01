@@ -1,6 +1,7 @@
 import "./styles/global.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { TrayIcon } from "@tauri-apps/api/tray";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { AnimatePresence } from "motion/react";
 import { api, type StoredProfile, type ProviderActive } from "./services/tauri";
@@ -26,18 +27,16 @@ export type Untracked = {
 };
 
 const ONBOARDED_KEY = "gitswitch.onboarded";
-const BROKEN_KEY = "gitswitch.broken";
 
-// Last-known broken profile ids, so badges paint immediately on reopen instead
-// of waiting for a fresh GitHub round trip. Reconciled in the background below.
-const loadBrokenCache = (): Set<string> => {
-  try {
-    const raw = localStorage.getItem(BROKEN_KEY);
-    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
-  } catch {
-    return new Set();
-  }
-};
+// Resolve `value`, or `fallback` once `ms` passes — whichever comes first. The
+// timer is cleared either way so a fast promise doesn't leave it pending.
+function withCap<T>(value: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const cap = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms);
+  });
+  return Promise.race([value, cap]).finally(() => clearTimeout(timer));
+}
 
 function App() {
   const [screen, setScreen] = useState<Screen>(() =>
@@ -47,9 +46,6 @@ function App() {
   );
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true); // first DB read in flight
-  // Ids of profiles that won't work, painted from the last-known cached set.
-  // Reconciled on demand via refresh, not on open.
-  const [broken] = useState<Set<string>>(loadBrokenCache);
   // Spins the reload icon while a refresh-all is running; ref guards re-entry.
   const [refreshingAll, setRefreshingAll] = useState(false);
   const refreshingAllRef = useRef(false);
@@ -122,14 +118,11 @@ function App() {
   }
 
   useEffect(() => {
-    import("@tauri-apps/api/tray").then(({ TrayIcon }) => {
-      const showTray = localStorage.getItem("gitswitch.showTrayIcon") !== "false";
-      if (!showTray) {
-        TrayIcon.getById("main").then((tray) => {
-          if (tray) tray.setVisible(false);
-        }).catch(() => {});
-      }
-    });
+    if (localStorage.getItem("gitswitch.showTrayIcon") === "false") {
+      TrayIcon.getById("main")
+        .then((tray) => tray?.setVisible(false))
+        .catch(() => {});
+    }
 
     const unlisten = listen<string>("active-changed", (e) => {
       setActiveId(e.payload);
@@ -177,7 +170,10 @@ function App() {
   function handleDelete(id: string) {
     if (id === activeId) return;
     setProfiles((prev) => prev.filter((p) => p.id !== id));
-    api.deleteProfile(id).catch(() => {});
+    api.deleteProfile(id).catch(() => {
+      // Optimistic removal failed — resync so the row comes back.
+      api.listProfiles().then(setProfiles).catch(() => {});
+    });
   }
 
   async function handleRefresh(id: string) {
@@ -209,17 +205,20 @@ function App() {
     }
   }
 
-  // Ctrl/Cmd+R refreshes all profiles (same as the reload icon).
+  // Ctrl/Cmd+R refreshes all profiles (same as the reload icon). Bound once;
+  // the ref always points at the latest handler (and so the latest profiles).
+  const refreshAllRef = useRef(handleRefreshAll);
+  refreshAllRef.current = handleRefreshAll;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "r") {
         e.preventDefault();
-        handleRefreshAll();
+        refreshAllRef.current();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [profiles]);
+  }, []);
 
   async function handleUpdateProfile(id: string, displayName: string, gitEmail: string) {
     try {
@@ -258,8 +257,6 @@ function App() {
     // First run: wait for the identity probe so Add Profile lands pre-synced.
     // Keep the spinner visible briefly, but never let a slow/hung probe block
     // onboarding — fall back to whatever we have after the cap.
-    const withCap = <T,>(p: Promise<T>, ms: number, fallback: T) =>
-      Promise.race([p, new Promise<T>((r) => setTimeout(() => r(fallback), ms))]);
 
     const [keyPath, list] = await Promise.all([
       withCap(reconcileRef.current, 4000, ""),
@@ -281,11 +278,12 @@ function App() {
   function handleSaveProfile(profile: Profile) {
     setProfiles((prev) => [...prev, profile]);
     setUntracked(null);
-    setActiveId((current) => {
-      if (current) return current;
+    // The first saved profile becomes active. Kept out of a setState updater:
+    // updaters must be pure (StrictMode runs them twice).
+    if (!activeId) {
+      setActiveId(profile.id);
       api.activateProfile(profile.id).then(refreshActiveState).catch(() => {});
-      return profile.id;
-    });
+    }
     setScreen("profiles");
   }
 
@@ -310,6 +308,13 @@ function App() {
     );
     return tracked ? null : untracked;
   }, [untracked, profiles]);
+
+  // Ids of profiles that won't work: the key file they point at is gone.
+  // Computed by the backend on every read, so a refresh re-checks it.
+  const broken = useMemo(
+    () => new Set(profiles.filter((p) => p.keyMissing).map((p) => p.id)),
+    [profiles]
+  );
 
   // Profile ids whose provider host block currently points at their key.
   const partialIds = useMemo(

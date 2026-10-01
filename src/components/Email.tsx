@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 const KEY = "gitswitch.hideEmail";
 const EVENT = "gitswitch:hide-email";
@@ -10,15 +10,14 @@ export function setHideEmail(on: boolean) {
   window.dispatchEvent(new Event(EVENT)); // notify any mounted <Email>
 }
 
+function subscribe(onChange: () => void) {
+  window.addEventListener(EVENT, onChange);
+  return () => window.removeEventListener(EVENT, onChange);
+}
+
 /** Live "hide email" preference; re-renders when toggled anywhere. */
 export function useHideEmail() {
-  const [hidden, setHidden] = useState(getHideEmail);
-  useEffect(() => {
-    const sync = () => setHidden(getHideEmail());
-    window.addEventListener(EVENT, sync);
-    return () => window.removeEventListener(EVENT, sync);
-  }, []);
-  return hidden;
+  return useSyncExternalStore(subscribe, getHideEmail);
 }
 
 /** Mask the local part, keeping the domain: jane@x.com -> ••••••@x.com */

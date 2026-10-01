@@ -3,6 +3,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { AnimatePresence, motion } from "motion/react";
 import { Check, Copy } from "@phosphor-icons/react";
 import type { GeneratedKey, Provider } from "../../services/tauri";
+import { useTimeout } from "../../utils/useTimeout";
 
 type GeneratedKeyPanelProps = {
   generated: GeneratedKey | null;
@@ -20,6 +21,7 @@ const PROVIDER_SSH_PATHS: Record<string, string> = {
 
 export default function GeneratedKeyPanel({ generated, provider, reduce }: GeneratedKeyPanelProps) {
   const [copied, setCopied] = useState(false);
+  const copiedReset = useTimeout();
 
   async function handleCopy() {
     const key = generated?.publicKey;
@@ -27,7 +29,7 @@ export default function GeneratedKeyPanel({ generated, provider, reduce }: Gener
     try {
       await navigator.clipboard.writeText(key);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
+      copiedReset.schedule(() => setCopied(false), 1600);
     } catch {
       /* clipboard blocked; ignore */
     }

@@ -3,6 +3,7 @@ import { Copy, Check } from "@phosphor-icons/react";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 import type { StoredProfile } from "../services/tauri";
 import { ProviderIcon } from "./ProviderIcon";
+import { useTimeout } from "../utils/useTimeout";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const container: Variants = {
@@ -21,11 +22,16 @@ type SSHKeysProps = {
 export default function SSHKeys({ profiles }: SSHKeysProps) {
   const reduce = useReducedMotion();
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const copiedReset = useTimeout();
 
   const handleCopy = async (id: string, keyPath: string) => {
-    await navigator.clipboard.writeText(keyPath);
+    try {
+      await navigator.clipboard.writeText(keyPath);
+    } catch {
+      return; // clipboard blocked; leave the icon as-is
+    }
     setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 1500);
+    copiedReset.schedule(() => setCopiedId(null), 1500);
   };
 
   return (

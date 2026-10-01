@@ -8,6 +8,7 @@ import SelectProviderStage from "./SelectProviderStage";
 import GeneratedKeyPanel from "./GeneratedKeyPanel";
 import { ProviderIcon } from "../ProviderIcon";
 import { CaretLeft } from "@phosphor-icons/react";
+import { useTimeout } from "../../utils/useTimeout";
 
 type AddProfileProps = {
   initialInput?: string;
@@ -66,6 +67,7 @@ export default function AddProfile({
   const [focused, setFocused] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [shake, setShake] = useState(false);
+  const shakeReset = useTimeout();
 
   const taRef = useRef<HTMLTextAreaElement>(null);
   const didAutoSync = useRef(false);
@@ -102,7 +104,7 @@ export default function AddProfile({
 
   function triggerShake() {
     setShake(true);
-    setTimeout(() => setShake(false), 400);
+    shakeReset.schedule(() => setShake(false), 400);
   }
 
   async function handleCreate() {
