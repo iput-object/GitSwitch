@@ -2,56 +2,169 @@
 
 <img src="https://i.imgur.com/7fIm5eT.png"/>
 
-GitSwitch is a fast, lightweight desktop application built with Tauri and React that allows developers to seamlessly manage and switch between multiple Git profiles and SSH keys.
+GitSwitch lets you use several Git accounts on one machine (work, personal,
+client) and switch between them in one click. Each account gets its own SSH
+key, and switching updates your global Git identity, your SSH config, and
+commit signing together, so every push and commit goes out as the right person.
 
-## Core Features
-- **One-Click Profile Switching:** Instantly swap between identities across GitHub, GitLab, Bitbucket, and custom providers.
-- **Automated SSH Setup:** Auto-generates keys and manages your `~/.ssh/config` without conflicts.
-- **Automatic Commit Signing:** Flawlessly wires up SSH commit signing so your work is always verified.
-- **Config Repair & Health Checks:** Automatically detects and repairs drift in your live Git or SSH configuration.
-- **System Tray Integration:** Lives in your background for fast access on macOS, Windows, and Linux.
-- **CLI Support:** Allows you to manage profiles from the command line.
+Works with GitHub, GitLab, Bitbucket, and self-hosted GitLab-style servers.
+Runs on Linux, macOS, and Windows.
 
-## Getting Started
+## Install
 
-**1. Add a Profile**
-- Click **Add Profile**.
-- Select your Git provider (GitHub, GitLab, Bitbucket, or Custom).
-- Enter your username and the email you use for commits.
-- Click **Generate** to create a fresh SSH key, or paste the path to an existing private key.
+Download the latest build from the
+[Releases page](https://github.com/iput-object/GitSwitch/releases/latest):
 
-**2. Add the Key to Your Provider**
-- After generating a key, copy the public key provided by GitSwitch.
-- Click the shortcut link to open your provider's SSH settings.
-- *Tip:* Add the key **twice** — once as an **Authentication Key** (for pushing/pulling) and once as a **Signing Key** (so your commits show up as "Verified").
+| Platform | File |
+| --- | --- |
+| Windows | `.msi` or `-setup.exe` |
+| macOS (Apple Silicon) | `aarch64.dmg` |
+| macOS (Intel) | `x64.dmg` |
+| Linux | `.AppImage`, `.deb`, or `.rpm` |
 
-**3. Save & Connect**
-- Click **Save**. GitSwitch will securely save your key, perfectly configure your `~/.ssh/config` file, and pull your profile details.
+You'll need `git` and OpenSSH (`ssh`, `ssh-keygen`) on your `PATH`. They're
+already there on macOS and most Linux distros, and come with Git for Windows.
 
-**4. Switch Profiles Seamlessly**
-- Select any saved profile from the dashboard and click **Switch**.
-- GitSwitch instantly updates your global `user.name`, `user.email`, and automatically enables SSH commit signing. Every commit you make will now be perfectly attributed and signed!
+GitSwitch updates itself: when a new version is out, the bell icon and the
+bottom of the sidebar offer to install it.
 
-**5. Keep Things Running Smoothly**
-- **Background Mode:** Close the window to keep GitSwitch running in the system tray for fast switching.
-- **Health Checks:** If your SSH configuration drifts or breaks, GitSwitch will alert you.
-- **Reconcile:** Click this button to instantly repair any broken config.
+> **macOS:** builds aren't notarized yet. If macOS says the app is damaged or
+> can't be opened, run `xattr -dr com.apple.quarantine /Applications/gitswitch.app`
+> once, then open it again.
+
+## Add your first account
+
+1. **Pick a provider.** GitHub, GitLab, Bitbucket, or **Custom** for a
+   self-hosted server.
+2. **Give it a key.** Either:
+   - click **Create key** to generate a fresh one, or
+   - paste a path to an existing private key (e.g. `~/.ssh/id_ed25519`), paste
+     the key itself, or drop the key file onto the field.
+3. **Add the public key to your provider** (only for a new key). GitSwitch
+   shows the public key with a copy button and a link to your provider's SSH
+   settings. On GitHub, add it **twice**: once as an *Authentication key* (to
+   push and pull) and once as a *Signing key* (so commits show as Verified).
+4. **Sync.** GitSwitch connects over SSH with that key, and the provider tells
+   it which account the key belongs to. You never type a username. Name,
+   avatar, and a suggested commit email come from the provider's public profile.
+5. **Confirm and save.** Adjust the display name or commit email if you like.
+
+Your first saved account becomes the active one.
+
+## Switching
+
+On the **Profiles** screen, click **Switch** on any saved account. That one
+becomes the **active profile**: your commits, pushes, and signatures all use it.
+
+The **⋮** menu on each account also has:
+
+- **Switch SSH only:** use this account's key for one provider without
+  changing who your commits are from. Handy when, say, your GitHub work account
+  is active but you need to push to a personal GitLab repo. It shows an
+  **SSH active** badge.
+- **Edit Profile**, **Refresh** (re-pull name, avatar, stats), and **Delete**.
+
+You can also switch from the **tray icon** without opening the window. Closing
+the window keeps GitSwitch in the tray; use **Quit** from the tray to exit.
+
+## What GitSwitch changes on your machine
+
+Switching only touches these, and only globally (repo-level `.git/config`
+overrides still win):
+
+| Where | What |
+| --- | --- |
+| `~/.gitconfig` | `user.name`, `user.email`, `user.signingkey`, `gpg.format = ssh`, `commit.gpgsign = true` |
+| `~/.ssh/config` | One block per provider host, between `# >>> GitSwitch managed block` markers. Any existing hand-written `Host github.com` (etc.) block is commented out, not deleted, so it can't override GitSwitch. Everything else in the file is left as is. |
+| `~/.ssh/gitswitch/` | Keys you created or pasted in GitSwitch. Keys you pointed at by path stay where they are. |
+
+The list of accounts lives in a small local database in the app's data folder.
+Nothing is sent anywhere except the SSH check and public-profile lookups to
+your providers.
+
+**To undo it:** delete the managed blocks from `~/.ssh/config` (and uncomment
+your old ones if you had any), and remove the five keys above from
+`~/.gitconfig` with `git config --global --unset <key>`.
+
+## Notifications
+
+The bell in the top bar has a red dot when something needs you:
+
+- a new version is ready to install, or needs a restart to finish;
+- a switch didn't fully apply;
+- your Git email was changed outside GitSwitch (e.g. by `git config` in a
+  terminal), with a button to re-apply the active profile;
+- an account's SSH key file has gone missing;
+- a key in your SSH config belongs to an account you haven't added yet (found
+  when you press refresh or **Ctrl/Cmd + R**).
+
+## Command line
+
+The app doubles as a CLI. Run it with a command instead of opening the window:
+
+```sh
+gitswitch list                                     # all accounts, * marks the active one
+gitswitch current                                  # the active account
+gitswitch use octocat                              # switch by login
+gitswitch add --provider github --key ~/.ssh/id_ed25519
+gitswitch open                                     # open the window
+gitswitch --hidden                                 # start in the tray only
+```
+
+`--provider` takes a built-in id (`github`, `gitlab`, `bitbucket`) or a custom
+provider's name. On Linux the `.deb` and `.rpm` put `gitswitch` on your `PATH`.
+On macOS it lives at `/Applications/gitswitch.app/Contents/MacOS/gitswitch`, so
+add an alias if you want it everywhere.
+
+## Troubleshooting
+
+**"did not recognize this key yet" when syncing.** The public key isn't on
+your provider account yet, or was added to a different account. Add it under
+SSH keys, then sync again.
+
+**Commits show as "Unverified".** The key is added for authentication but not
+for signing. Add the same public key again as a *Signing key*. Older commits
+flip to Verified once it's added.
+
+**A profile shows "won't work".** Its key file was moved or deleted. Delete
+the profile and add the account again with the key's new location (or a new
+key).
+
+**Pushes still use the wrong account.** Check the repo's remote URL with
+`git remote -v`. A custom host alias like `git@github-work:…` bypasses the
+`github.com` block GitSwitch manages. Use the plain `git@github.com:…` form.
 
 ## Development
-This project requires Node.js and Rust.
 
-1. Install dependencies: `pnpm install`
-2. Start the development server: `pnpm tauri dev`
-3. Build for production: `pnpm tauri build`
+You'll need Node.js 24, pnpm, and Rust (stable). On Linux, also the Tauri
+system packages: `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf`.
 
-## Todo List
-- [x] SSH commit signing — sets `gpg.format=ssh`, `user.signingkey`, and `commit.gpgsign` on profile switch.
-- [x] Add support for more Git providers (GitLab, Bitbucket, etc.)
-- [x] Add CLI support for multiple platforms.
-- [ ] Implement OAuth/Login flow as an alternative to SSH keys
+```sh
+pnpm install
+pnpm tauri dev      # run with hot reload
+pnpm tauri build    # production build and installers
+```
 
-## Development Approach
-Due to time constraints in my schedule, the majority of the code in this repository was written by AI. My role is focused on high-level architecture, detailed planning, providing proper guidance to the AI, and making minor manual tweaks to ensure everything works flawlessly.
+The frontend is React + Tailwind in `src/`, the backend is Rust in
+`src-tauri/src/`. Releases are built by GitHub Actions when a `v*` tag is
+pushed.
+
+## Roadmap
+
+- [x] SSH commit signing
+- [x] GitLab, Bitbucket, and self-hosted providers
+- [x] CLI
+- [ ] Sign in with OAuth as an alternative to SSH keys
+- [ ] GPG key support
+
+## Development approach
+
+Due to time constraints in my schedule, the majority of the code in this
+repository was written by AI. My role is focused on high-level architecture,
+detailed planning, providing proper guidance to the AI, and making minor manual
+tweaks to ensure everything works flawlessly.
 
 ## Contributing
-Contributions are highly welcome. If you have an idea, find a bug, or want to add a feature from the Todo list, feel free to open an issue or submit a pull request. Make sure your code is well-formatted and tested before submitting.
+
+Contributions are welcome. If you have an idea, find a bug, or want to pick up
+something from the roadmap, open an issue or a pull request.
