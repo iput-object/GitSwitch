@@ -20,7 +20,8 @@ Download the latest build from the
 | Windows | `.msi` or `-setup.exe` |
 | macOS (Apple Silicon) | `aarch64.dmg` |
 | macOS (Intel) | `x64.dmg` |
-| Linux | `.AppImage`, `.deb`, or `.rpm` |
+| Linux (x64) | `amd64.AppImage`, `amd64.deb`, or `x86_64.rpm` |
+| Linux (ARM64) | `aarch64.AppImage`, `arm64.deb`, or `aarch64.rpm` |
 
 You'll need `git` and OpenSSH (`ssh`, `ssh-keygen`) on your `PATH`. They're
 already there on macOS and most Linux distros, and come with Git for Windows.
