@@ -13,6 +13,7 @@ import AddProfile from "./components/AddProfile";
 import Profiles from "./components/profiles/Profiles";
 import SSHKeys from "./components/SSHKeys";
 import Settings from "./components/Settings";
+import UpdateReadyModal from "./components/UpdateReadyModal";
 import { useAppUpdater } from "./hooks/useAppUpdater";
 import { useProfiles } from "./hooks/useProfiles";
 import { useNotices } from "./hooks/useNotices";
@@ -153,6 +154,19 @@ function App() {
           )}
         </div>
       </div>
+
+      <AnimatePresence>
+        {updater.restartPromptOpen && updater.status.phase === "ready" && (
+          <UpdateReadyModal
+            version={updater.status.version}
+            onRestart={() => {
+              updater.dismissRestartPrompt();
+              updater.finishUpdate();
+            }}
+            onLater={updater.dismissRestartPrompt}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

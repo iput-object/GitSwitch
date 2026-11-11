@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { check, type Update } from "@tauri-apps/plugin-updater";
-import { ask } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
 
 export type UpdaterStatus =
@@ -18,6 +17,9 @@ export type AppUpdater = {
   checkForUpdates: () => Promise<void>;
   installUpdate: () => Promise<void>;
   finishUpdate: () => Promise<void>;
+  /** The "update is ready" prompt shown once a download finishes. */
+  restartPromptOpen: boolean;
+  dismissRestartPrompt: () => void;
 };
 
 // Windows installers replace the running exe, so the updater plugin launches
@@ -30,10 +32,6 @@ const RECHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 // Keep the spinner up for at least a beat so a fast check still reads.
 const MIN_CHECK_MS = 700;
 
-const restartPrompt = isWindows
-  ? "GitSwitch will close while the installer runs, then open again on the new version."
-  : "The update is installed. Restart GitSwitch now to start using it?";
-
 /**
  * App-wide update state. Lives in App (not the sidebar) so it survives screen
  * changes, feeds both the sidebar and the notification bell, and holds a single
@@ -42,6 +40,7 @@ const restartPrompt = isWindows
  */
 export function useAppUpdater(): AppUpdater {
   const [status, setStatus] = useState<UpdaterStatus>({ phase: "idle" });
+  const [restartPromptOpen, setRestartPromptOpen] = useState(false);
   const updateRef = useRef<Update | null>(null);
   const busyRef = useRef(false); // a check or download is in flight
 
@@ -117,6 +116,9 @@ export function useAppUpdater(): AppUpdater {
       // for the user's go-ahead below. Elsewhere install now, restart later.
       if (!isWindows) await update.install();
       setStatus({ phase: "ready", version });
+      // In-app, not a native dialog: GTK repeats the title as both the window
+      // title and the heading. "Later" keeps the ready state for sidebar/bell.
+      setRestartPromptOpen(true);
     } catch (error) {
       console.error("Update install failed:", error);
       setStatus({ phase: "error", version, reason: String(error) });
@@ -124,16 +126,9 @@ export function useAppUpdater(): AppUpdater {
     } finally {
       busyRef.current = false;
     }
+  }, []);
 
-    const restartNow = await ask(restartPrompt, {
-      title: `GitSwitch ${version} is ready`,
-      kind: "info",
-      okLabel: isWindows ? "Install now" : "Restart now",
-      cancelLabel: "Later",
-    }).catch(() => false);
-    // "Later" keeps the ready state, so the sidebar and bell offer it again.
-    if (restartNow) await finishUpdate();
-  }, [finishUpdate]);
+  const dismissRestartPrompt = useCallback(() => setRestartPromptOpen(false), []);
 
   useEffect(() => {
     checkForUpdates();
@@ -148,7 +143,14 @@ export function useAppUpdater(): AppUpdater {
   }, [checkForUpdates, replaceUpdate]);
 
   return useMemo(
-    () => ({ status, checkForUpdates, installUpdate, finishUpdate }),
-    [status, checkForUpdates, installUpdate, finishUpdate],
+    () => ({
+      status,
+      checkForUpdates,
+      installUpdate,
+      finishUpdate,
+      restartPromptOpen,
+      dismissRestartPrompt,
+    }),
+    [status, checkForUpdates, installUpdate, finishUpdate, restartPromptOpen, dismissRestartPrompt],
   );
 }
