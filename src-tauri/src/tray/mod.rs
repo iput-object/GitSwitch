@@ -7,6 +7,12 @@ use tauri::{
     AppHandle, Emitter, Manager, Wry,
 };
 
+/// Tray id, unique to this app. On Linux the tray library derives the
+/// indicator id and the temp icon file (`$XDG_RUNTIME_DIR/tray-icon/tray-icon-<id>-N.png`)
+/// from it, so a generic id like "main" collides with other Tauri apps: they
+/// overwrite each other's icon file and show up as duplicate icons.
+const TRAY_ID: &str = "gitswitch-tray";
+
 const OPEN_ID: &str = "__open";
 const QUIT_ID: &str = "__quit";
 const NONE_ID: &str = "__none";
@@ -76,12 +82,12 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
     // Never register twice: a lingering tray (hot-reload, or a still-running
     // prior instance) would otherwise trigger libayatana "already exported"
     // warnings on the StatusNotifierItem D-Bus path.
-    if app.tray_by_id("main").is_some() {
+    if app.tray_by_id(TRAY_ID).is_some() {
         return Ok(());
     }
 
     let menu = build_menu(app)?;
-    let mut builder = TrayIconBuilder::with_id("main")
+    let mut builder = TrayIconBuilder::with_id(TRAY_ID)
         .tooltip("GitSwitch")
         .menu(&menu)
         .show_menu_on_left_click(false)
@@ -129,7 +135,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
 pub fn rebuild(app: &AppHandle) {
     let handle = app.clone();
     let _ = app.run_on_main_thread(move || {
-        if let Some(tray) = handle.tray_by_id("main") {
+        if let Some(tray) = handle.tray_by_id(TRAY_ID) {
             if let Ok(menu) = build_menu(&handle) {
                 let _ = tray.set_menu(Some(menu));
             }
